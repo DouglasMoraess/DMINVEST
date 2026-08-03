@@ -928,23 +928,6 @@ async function fetchClosesUSBatch(symbols, tf) {
    Separado do histórico: o histórico serve só pra calcular as médias;
    o preço mostrado vem da cotação "ao vivo" de cada API.
    --------------------------------------------------------------- */
-async function fetchLivePriceUS(symbols) {
-  const url = `https://api.twelvedata.com/price?symbol=${symbols.join(",")}&apikey=${TWELVE_DATA_KEY}`;
-  const res = await fetch(url);
-  const json = await res.json();
-  const out = {};
-
-  if (json.price) {
-    out[symbols[0]] = parseFloat(json.price);
-  } else {
-    symbols.forEach((sym) => {
-      const entry = json[sym];
-      out[sym] = entry && entry.price ? parseFloat(entry.price) : null;
-    });
-  }
-  return out;
-}
-
 async function fetchLivePriceBR(symbols) {
   const url = `https://brapi.dev/api/v2/stocks/quote?symbols=${symbols.join(",")}`;
   const headers = BRAPI_TOKEN && !BRAPI_TOKEN.startsWith("COLE_") ? { Authorization: `Bearer ${BRAPI_TOKEN}` } : {};
@@ -968,15 +951,7 @@ async function fetchAllMarketData() {
   const usSymbols = ASSETS.filter((a) => a.country === "US").map((a) => a.symbol);
   const brSymbols = brAssets.map((a) => a.symbol);
 
-  // Cotação AO VIVO — EUA (1 chamada em lote)
-  try {
-    Object.assign(priceMap, await fetchLivePriceUS(usSymbols));
-  } catch (err) {
-    console.error("Erro cotação Twelve Data", err);
-  }
-  await sleep(1200);
-
-  // Cotação AO VIVO — Brasil (1 chamada em lote)
+  // Cotação AO VIVO — Brasil (brapi.dev não tem limite apertado por minuto)
   try {
     Object.assign(priceMap, await fetchLivePriceBR(brSymbols));
   } catch (err) {
@@ -984,7 +959,14 @@ async function fetchAllMarketData() {
   }
   await sleep(300);
 
-  // HISTÓRICO — EUA em lote — 3 chamadas no total (uma por timeframe)
+  // HISTÓRICO — EUA em lote — 3 chamadas no total (uma por timeframe).
+  // Cada chamada consome 5 créditos (5 símbolos). O plano grátis da
+  // Twelve Data permite só 8 créditos por MINUTO (não por segundo!),
+  // então cada chamada precisa cair em um minuto-calendário diferente
+  // da anterior — por isso a espera de ~65s entre elas.
+  // (O preço "ao vivo" das americanas usa o último fechamento do
+  // candle de 15M, que já é dado real com pequeno atraso — sem
+  // precisar de uma chamada extra de cotação.)
   for (const tf of ["15M", "60M", "D"]) {
     try {
       const batch = await fetchClosesUSBatch(usSymbols, tf);
@@ -992,10 +974,16 @@ async function fetchAllMarketData() {
         closesMap[sym] = closesMap[sym] || {};
         closesMap[sym][tf] = batch[sym];
       });
+      if (tf === "15M") {
+        usSymbols.forEach((sym) => {
+          const closes = closesMap[sym]["15M"];
+          if (closes && closes.length) priceMap[sym] = closes[closes.length - 1];
+        });
+      }
     } catch (err) {
       console.error("Erro Twelve Data", tf, err);
     }
-    await sleep(1200); // respeita o limite de créditos/minuto do plano grátis
+    await sleep(65000); // respeita o limite real de 8 créditos/minuto do plano grátis
   }
 
   // HISTÓRICO — Brasil, um ativo por vez (brapi.dev)
