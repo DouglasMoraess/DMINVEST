@@ -1,157 +1,1014 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DM INVEST — Scanner de Mercado</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DM INVEST — Scanner Inteligente de Médias Móveis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  /* =========================================================
+     DM INVEST — DESIGN TOKENS
+     ========================================================= */
+  :root {
+    --bg-void: #05070c;
+    --bg-main: #090d15;
+    --bg-card: #11161f;
+    --bg-card-hover: #161d29;
+    --border-soft: #1e2634;
+    --border-glow: rgba(59, 130, 246, 0.25);
+
+    --green: #00e39a;
+    --green-dim: rgba(0, 227, 154, 0.12);
+    --red: #ff4d5e;
+    --red-dim: rgba(255, 77, 94, 0.12);
+    --orange: #ffa53d;
+    --orange-dim: rgba(255, 165, 61, 0.12);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59, 130, 246, 0.12);
+
+    --text-main: #eef1f7;
+    --text-sub: #8b93a7;
+    --text-faint: #5a6172;
+
+    --font-ui: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+
+    --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.35);
+    --shadow-lift: 0 20px 45px rgba(0, 0, 0, 0.5);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-void);
+    color: var(--text-main);
+    font-family: var(--font-ui);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Fundo com grid sutil + glow radial, estilo terminal financeiro */
+  .bg-fx {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .bg-fx::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, black 20%, transparent 70%);
+  }
+  .bg-fx::after {
+    content: "";
+    position: absolute;
+    top: -10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(0, 227, 154, 0.10), transparent 70%);
+    filter: blur(10px);
+  }
+
+  /* =========================================================
+     HEADER
+     ========================================================= */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px 36px;
+    background: rgba(5, 7, 12, 0.75);
+    backdrop-filter: blur(16px) saturate(140%);
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .brand { display: flex; align-items: center; gap: 12px; }
+
+  .brand-mark svg { display: block; }
+
+  .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand-title { font-size: 18px; font-weight: 800; letter-spacing: 0.3px; }
+  .brand-title span { color: var(--green); }
+  .brand-sub { font-size: 11px; color: var(--text-sub); letter-spacing: 1.2px; text-transform: uppercase; }
+
+  .nav {
+    display: flex;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4px;
+    border-radius: 999px;
+    border: 1px solid var(--border-soft);
+  }
+  .nav a {
+    color: var(--text-sub);
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 999px;
+    transition: color 0.25s ease, background 0.25s ease;
+  }
+  .nav a:hover { color: var(--text-main); }
+  .nav a.active { color: #04140d; background: var(--green); }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-sub);
+  }
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .clock {
+    font-family: var(--font-mono);
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--text-main);
+  }
+
+  @media (max-width: 860px) {
+    .nav { display: none; }
+  }
+
+  /* =========================================================
+     DISCLAIMER
+     ========================================================= */
+  .disclaimer {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    max-width: 1320px;
+    margin: 20px auto 0;
+    padding: 16px 20px;
+    background: var(--orange-dim);
+    border: 1px solid rgba(255, 165, 61, 0.3);
+    border-radius: var(--radius-md);
+  }
+  .disclaimer p { font-size: 12.5px; line-height: 1.65; color: var(--text-sub); }
+  .disclaimer b { color: var(--orange); }
+  .disclaimer-close {
+    background: transparent; border: none; color: var(--text-sub);
+    cursor: pointer; font-size: 15px; padding: 2px 8px; border-radius: 6px;
+    transition: 0.2s;
+  }
+  .disclaimer-close:hover { color: var(--text-main); background: rgba(255,255,255,0.06); }
+  .disclaimer.hidden { display: none; }
+
+  /* =========================================================
+     LAYOUT / CONTAINER
+     ========================================================= */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 34px 36px 70px;
+  }
+
+  .section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .section-heading h2 { font-size: 19px; font-weight: 700; }
+  .section-heading span { font-size: 12.5px; color: var(--text-sub); font-family: var(--font-mono); }
+
+  /* =========================================================
+     REVEAL ON SCROLL
+     ========================================================= */
+  .reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity 0.7s cubic-bezier(.22,1,.36,1), transform 0.7s cubic-bezier(.22,1,.36,1);
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* =========================================================
+     HERO / SUMMARY CARDS
+     ========================================================= */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 40px;
+  }
+
+  .summary-card {
+    background: linear-gradient(155deg, var(--bg-card), #0d121b);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.35s cubic-bezier(.22,1,.36,1), box-shadow 0.35s ease, border-color 0.35s ease;
+  }
+  .summary-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lift);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+  .summary-icon {
+    font-size: 24px;
+    width: 46px; height: 46px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.04);
+  }
+  .summary-info { display: flex; flex-direction: column; gap: 2px; }
+  .summary-value { font-family: var(--font-mono); font-size: 26px; font-weight: 700; }
+  .summary-label { font-size: 12px; color: var(--text-sub); }
+
+  .summary-card.up .summary-value { color: var(--green); }
+  .summary-card.down .summary-value { color: var(--red); }
+  .summary-card.side .summary-value { color: var(--orange); }
+  .summary-card.total .summary-value { color: var(--blue); }
+
+  /* =========================================================
+     TOOLBAR
+     ========================================================= */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 30px;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+  }
+  .filter-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    background: transparent;
+    border: 1px solid var(--border-soft);
+    color: var(--text-sub);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .chip:hover { color: var(--text-main); border-color: rgba(255,255,255,0.25); transform: translateY(-1px); }
+  .chip.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+  .chip.active.country-chip { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+
+  .actions { display: flex; gap: 10px; margin-left: auto; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-ui); font-size: 13.5px; font-weight: 700;
+    padding: 11px 20px; border-radius: var(--radius-sm);
+    border: 1px solid transparent; cursor: pointer;
+    transition: all 0.25s cubic-bezier(.22,1,.36,1);
+  }
+  .btn-primary { background: var(--green); color: #04140d; }
+  .btn-primary:hover { box-shadow: 0 0 0 4px rgba(0,227,154,0.15), 0 10px 25px rgba(0,227,154,0.25); transform: translateY(-2px); }
+  .btn-primary.busy .btn-ic { animation: spin 0.6s linear infinite; }
+  .btn-ghost { background: rgba(255,255,255,0.03); border-color: var(--border-soft); color: var(--text-sub); }
+  .btn-ghost:hover { color: var(--text-main); border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* =========================================================
+     STOCK CARDS GRID
+     ========================================================= */
+  .stock-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+    margin-bottom: 46px;
+  }
+
+  .stock-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.35s cubic-bezier(.22,1,.36,1), box-shadow 0.35s ease, border-color 0.35s ease;
+    cursor: default;
+  }
+  .stock-card:hover {
+    transform: translateY(-8px) scale(1.012);
+    box-shadow: var(--shadow-lift);
+    border-color: rgba(255,255,255,0.16);
+  }
+  .stock-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: var(--edge-color, var(--border-soft));
+    transition: background 0.4s ease;
+  }
+  .stock-card.up::before { background: var(--green); }
+  .stock-card.down::before { background: var(--red); }
+  .stock-card.side::before { background: var(--orange); }
+
+  .stock-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .stock-id { display: flex; align-items: center; gap: 10px; }
+  .stock-flag { font-size: 18px; }
+  .stock-symbol { font-size: 16px; font-weight: 800; letter-spacing: 0.3px; }
+  .stock-name { font-size: 11.5px; color: var(--text-sub); display: block; margin-top: 1px; }
+
+  .stock-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 700;
+    padding: 5px 11px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .stock-badge.up { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,227,154,0.35); }
+  .stock-badge.down { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,77,94,0.35); }
+  .stock-badge.side { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,165,61,0.35); }
+
+  .stock-price-row {
+    display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px;
+  }
+  .stock-price { font-family: var(--font-mono); font-size: 24px; font-weight: 700; }
+  .stock-change { font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
+  .stock-change.up { color: var(--green); }
+  .stock-change.down { color: var(--red); }
+  .stock-change.side { color: var(--orange); }
+
+  .ma-rows { display: flex; flex-direction: column; gap: 7px; }
+  .ma-row {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11.5px; color: var(--text-sub);
+  }
+  .ma-row b { color: var(--text-main); font-family: var(--font-mono); font-weight: 600; }
+  .ma-track { flex: 1; height: 4px; margin: 0 10px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .ma-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+  .ma-fill.ma9 { background: var(--blue); }
+  .ma-fill.ma20 { background: #a78bfa; }
+  .ma-fill.ma200 { background: var(--text-faint); }
+
+  .stock-verdict {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border-soft);
+    font-size: 11.5px;
+    color: var(--text-sub);
+  }
+  .stock-verdict b { color: var(--text-main); }
+
+  .empty-state {
+    text-align: center;
+    padding: 70px 20px;
+    color: var(--text-sub);
+    grid-column: 1 / -1;
+  }
+  .empty-state span { font-size: 34px; display: block; margin-bottom: 12px; }
+
+  /* =========================================================
+     TOAST / ALERTAS INTELIGENTES
+     ========================================================= */
+  #alertContainer {
+    position: fixed;
+    top: 90px;
+    right: 24px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 340px;
+  }
+
+  .toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    background: rgba(17, 22, 31, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-lift);
+    transform: translateX(120%);
+    opacity: 0;
+    animation: toastIn 0.45s cubic-bezier(.22,1,.36,1) forwards;
+  }
+  .toast.leaving { animation: toastOut 0.35s ease forwards; }
+
+  @keyframes toastIn { to { transform: translateX(0); opacity: 1; } }
+  @keyframes toastOut { to { transform: translateX(120%); opacity: 0; } }
+
+  .toast-icon { font-size: 18px; line-height: 1.2; }
+  .toast-body { display: flex; flex-direction: column; gap: 2px; }
+  .toast-title { font-size: 13px; font-weight: 700; }
+  .toast-msg { font-size: 12px; color: var(--text-sub); }
+
+  .toast.up { border-color: rgba(0,227,154,0.4); }
+  .toast.up .toast-title { color: var(--green); }
+  .toast.down { border-color: rgba(255,77,94,0.4); }
+  .toast.down .toast-title { color: var(--red); }
+  .toast.side { border-color: rgba(255,165,61,0.4); }
+  .toast.side .toast-title { color: var(--orange); }
+
+  @media (max-width: 500px) {
+    #alertContainer { left: 12px; right: 12px; max-width: none; top: 78px; }
+  }
+
+  /* =========================================================
+     FOOTER
+     ========================================================= */
+  .footer {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--text-sub);
+    opacity: 0.75;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .footer p { margin-bottom: 8px; }
+  .footer b { color: var(--text-sub); }
+
+  /* =========================================================
+     RESPONSIVE
+     ========================================================= */
+  @media (max-width: 980px) {
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .header { padding: 12px 18px; }
+    .container { padding: 24px 16px 50px; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .actions { margin-left: 0; width: 100%; }
+    .btn { flex: 1; justify-content: center; }
+    .stock-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
 </head>
 <body>
 
-<div class="bg-grid"></div>
+<div class="bg-fx"></div>
 
+<!-- ================= HEADER ================= -->
 <header class="header">
-  <div class="header-left">
-    <div class="logo-mark">
-      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="1" y="1" width="32" height="32" rx="8" stroke="url(#g1)" stroke-width="1.5"/>
-        <path d="M7 22L12.5 15L17 19L27 8" stroke="#00ff9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M21 8H27V14" stroke="#00ff9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <defs>
-          <linearGradient id="g1" x1="0" y1="0" x2="34" y2="34" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#00ff9c"/>
-            <stop offset="1" stop-color="#1c2536"/>
-          </linearGradient>
-        </defs>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="34" height="34" rx="9" stroke="#1e2634" stroke-width="1.5"/>
+        <path d="M7 24L13 16L18 20L29 7" stroke="#00e39a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M22 7H29V14" stroke="#00e39a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
-    <div class="logo-text">
-      <span class="logo-title">DM <b>INVEST</b></span>
-      <span class="logo-subtitle">Scanner de Mercado</span>
+    <div class="brand-text">
+      <span class="brand-title">DM <span>INVEST</span></span>
+      <span class="brand-sub">Scanner Inteligente · Médias Móveis</span>
     </div>
   </div>
 
-  <nav class="header-nav">
-    <a href="#dashboard" class="nav-link active" data-view="dashboard">Dashboard</a>
-    <a href="#alertas" class="nav-link" data-view="alertas">Alertas</a>
-    <a href="#ativos" class="nav-link" data-view="ativos">Ativos</a>
+  <nav class="nav">
+    <a href="#dashboard" class="active" data-nav="todos">Dashboard</a>
+    <a href="#alertas" data-nav="alertas">Alertas</a>
+    <a href="#ativos" data-nav="ativos">Ativos</a>
   </nav>
 
-  <div class="header-right">
-    <span class="live-dot"></span>
-    <span class="live-label">Mercado <b id="marketStatus">Aberto</b></span>
+  <div class="header-status">
+    <span class="pulse-dot"></span>
+    <span>Mercado <b id="marketStatus" style="color:var(--text-main)">Aberto</b></span>
     <span class="clock" id="clock">--:--:--</span>
   </div>
 </header>
 
+<!-- ================= DISCLAIMER ================= -->
+<div class="disclaimer" id="disclaimer">
+  <p>
+    <b>Aviso legal:</b> a DM INVEST é uma ferramenta educacional de estudo sobre médias móveis (MM9, MM20, MM200).
+    Preços e alertas são <b>simulados</b> e gerados por <b>regras matemáticas automáticas</b> — não constituem
+    recomendação, análise ou oferta de investimento (Resolução CVM nº 20/2021). Consulte sempre um profissional
+    certificado antes de investir.
+  </p>
+  <button class="disclaimer-close" id="disclaimerClose" aria-label="Fechar aviso">✕</button>
+</div>
+
+<!-- ================= ALERTAS (TOASTS) ================= -->
+<div id="alertContainer" aria-live="polite"></div>
+
 <main class="container">
 
-  <section class="summary-grid">
-    <div class="summary-card trend">
+  <!-- ================= RESUMO ================= -->
+  <section class="summary-grid reveal" id="summarySection">
+    <div class="summary-card total">
+      <div class="summary-icon">📊</div>
+      <div class="summary-info">
+        <span class="summary-value" id="countTotal">0</span>
+        <span class="summary-label">Ativos monitorados</span>
+      </div>
+    </div>
+    <div class="summary-card up">
       <div class="summary-icon">📈</div>
       <div class="summary-info">
-        <span class="summary-value" id="countTrend">0</span>
-        <span class="summary-label">Em tendência forte</span>
+        <span class="summary-value" id="countUp">0</span>
+        <span class="summary-label">Tendência de alta</span>
       </div>
-      <div class="summary-bar"><div class="summary-bar-fill" id="barTrend"></div></div>
     </div>
-
-    <div class="summary-card pullback">
-      <div class="summary-icon">⚠️</div>
+    <div class="summary-card down">
+      <div class="summary-icon">📉</div>
       <div class="summary-info">
-        <span class="summary-value" id="countPullback">0</span>
-        <span class="summary-label">Em pullback</span>
+        <span class="summary-value" id="countDown">0</span>
+        <span class="summary-label">Tendência de baixa</span>
       </div>
-      <div class="summary-bar"><div class="summary-bar-fill" id="barPullback"></div></div>
     </div>
-
-    <div class="summary-card neutral">
-      <div class="summary-icon">❌</div>
+    <div class="summary-card side">
+      <div class="summary-icon">➖</div>
       <div class="summary-info">
-        <span class="summary-value" id="countNeutral">0</span>
-        <span class="summary-label">Sem sinal</span>
-      </div>
-      <div class="summary-bar"><div class="summary-bar-fill" id="barNeutral"></div></div>
-    </div>
-
-    <div class="summary-card last-update">
-      <div class="summary-icon">🕒</div>
-      <div class="summary-info">
-        <span class="summary-value small" id="lastUpdate">agora</span>
-        <span class="summary-label">Última análise</span>
+        <span class="summary-value" id="countSide">0</span>
+        <span class="summary-label">Mercado lateral</span>
       </div>
     </div>
   </section>
 
-  <section class="toolbar">
+  <!-- ================= TOOLBAR ================= -->
+  <section class="toolbar reveal">
     <div class="filter-group" id="signalFilters">
-      <button class="filter-btn active" data-filter="todos">Todos</button>
-      <button class="filter-btn" data-filter="tendencia">Tendência</button>
-      <button class="filter-btn" data-filter="pullback">Pullback</button>
+      <button class="chip active" data-filter="todos">Todos</button>
+      <button class="chip" data-filter="up">📈 Alta</button>
+      <button class="chip" data-filter="down">📉 Baixa</button>
+      <button class="chip" data-filter="side">➖ Lateral</button>
     </div>
-
     <div class="filter-group" id="countryFilters">
-      <button class="filter-btn country active" data-country="todos">🌐 Todos</button>
-      <button class="filter-btn country" data-country="BR">🇧🇷 Brasil</button>
-      <button class="filter-btn country" data-country="US">🇺🇸 EUA</button>
+      <button class="chip country-chip active" data-country="todos">🌐 Todos</button>
+      <button class="chip country-chip" data-country="BR">🇧🇷 Brasil</button>
+      <button class="chip country-chip" data-country="US">🇺🇸 EUA</button>
     </div>
-
-    <div class="tf-group" id="tfFilters">
-      <button class="tf-btn active" data-tf="1D">1D</button>
-      <button class="tf-btn" data-tf="1H">1H</button>
-      <button class="tf-btn" data-tf="15M">15M</button>
-    </div>
-
-    <div class="action-group">
-      <button class="btn btn-primary" id="btnRefresh">
-        <span class="btn-icon">⟳</span> Atualizar análise
+    <div class="actions">
+      <button class="btn btn-primary" id="btnVerify">
+        <span class="btn-ic">⟳</span> Verificar agora
       </button>
-      <button class="btn btn-ghost" id="btnFilterAlerts">
-        <span class="btn-icon">🔔</span> Filtrar alertas
+      <button class="btn btn-ghost" id="btnAuto">
+        <span class="btn-ic">⏱</span> Auto: <span id="autoState">ligado</span>
       </button>
     </div>
   </section>
 
-  <section class="table-section">
-    <div class="table-header">
-      <h2>Scanner de Ativos</h2>
-      <span class="table-count" id="tableCount">0 ativos</span>
+  <!-- ================= CARDS DE ATIVOS ================= -->
+  <section class="reveal">
+    <div class="section-heading">
+      <h2>Ativos monitorados</h2>
+      <span id="lastCheck">última verificação: --:--:--</span>
     </div>
-
-    <div class="table-wrapper">
-      <table class="asset-table">
-        <thead>
-          <tr>
-            <th>País</th>
-            <th>Ativo</th>
-            <th>Timeframe</th>
-            <th>Preço</th>
-            <th>Variação</th>
-            <th>Status</th>
-            <th>Tipo de Alerta</th>
-          </tr>
-        </thead>
-        <tbody id="assetTableBody">
-          <!-- injected by script.js -->
-        </tbody>
-      </table>
-    </div>
-
-    <div class="empty-state" id="emptyState" style="display:none;">
-      <span class="empty-icon">🔍</span>
-      <p>Nenhum ativo corresponde aos filtros selecionados.</p>
+    <div class="stock-grid" id="stockGrid">
+      <!-- cards injetados via JS -->
     </div>
   </section>
 
   <footer class="footer">
-    <span>DM INVEST © 2026 — Scanner educacional. Não constitui recomendação de investimento.</span>
+    <p><b>DM INVEST</b> © 2026 — Plataforma de estudo e simulação de estratégias com médias móveis.</p>
+    <p>
+      Este site tem finalidade exclusivamente <b>educacional</b>. Nenhum conteúdo aqui apresentado — cotações,
+      sinais, badges ou textos — constitui <b>recomendação de compra ou venda</b>, análise de valores mobiliários,
+      consultoria ou oferta de investimento, nos termos da Resolução CVM nº 20/2021. Os dados são simulados e os
+      sinais são gerados por regras técnicas automatizadas (cruzamento de médias móveis 9/20/200), sujeitos a
+      falhas, atrasos e imprecisões. Antes de investir, consulte um profissional certificado (CNPI/agente autônomo
+      registrado na CVM).
+    </p>
   </footer>
 
 </main>
 
-<script src="script.js"></script>
+<script>
+"use strict";
+
+/* =============================================================
+   DM INVEST — SCANNER DE MÉDIAS MÓVEIS (9 / 20 / 200)
+   Tudo em JavaScript puro, sem dependências externas.
+   Os preços e médias são SIMULADOS (mock) para fins didáticos.
+   ============================================================= */
+
+/* ---------------------------------------------------------------
+   1) BASE DE ATIVOS (mock)
+   Cada ativo tem um preço-base e uma "fase" própria que oscila
+   ao longo do tempo, simulando ciclos de alta, baixa e lateralização.
+   --------------------------------------------------------------- */
+const ASSETS = [
+  { symbol: "PETR4", name: "Petrobras PN",       country: "BR", base: 38.42 },
+  { symbol: "VALE3", name: "Vale ON",            country: "BR", base: 62.15 },
+  { symbol: "ITUB4", name: "Itaú Unibanco PN",   country: "BR", base: 33.70 },
+  { symbol: "BBAS3", name: "Banco do Brasil ON", country: "BR", base: 27.05 },
+  { symbol: "WEGE3", name: "WEG ON",             country: "BR", base: 40.61 },
+  { symbol: "MGLU3", name: "Magazine Luiza ON",  country: "BR", base: 2.14  },
+  { symbol: "AAPL",  name: "Apple Inc.",         country: "US", base: 196.50 },
+  { symbol: "TSLA",  name: "Tesla Inc.",         country: "US", base: 251.90 },
+  { symbol: "MSFT",  name: "Microsoft Corp.",    country: "US", base: 431.20 },
+  { symbol: "NVDA",  name: "NVIDIA Corp.",       country: "US", base: 138.75 },
+  { symbol: "GOOGL", name: "Alphabet Inc.",      country: "US", base: 176.30 },
+].map((a) => ({
+  ...a,
+  phase: Math.random() * Math.PI * 2,      // fase inicial aleatória do ciclo
+  speed: 0.10 + Math.random() * 0.12,      // velocidade do ciclo (varia por ativo)
+  status: "side",                          // estado anterior (para detectar mudanças)
+  lastPrice: a.base,
+}));
+
+const FLAGS = { BR: "🇧🇷", US: "🇺🇸" };
+const CURRENCY = { BR: "R$", US: "$" };
+
+let activeSignalFilter = "todos";
+let activeCountry = "todos";
+let autoModeOn = true;
+let autoTimer = null;
+
+/* ---------------------------------------------------------------
+   2) FUNÇÃO PRINCIPAL — VERIFICA ALINHAMENTO DAS MÉDIAS MÓVEIS
+   Regras:
+     preço > MM9 > MM20 > MM200  -> "up"   (tendência de ALTA)
+     preço < MM9 < MM20 < MM200  -> "down" (tendência de BAIXA)
+     qualquer outro caso         -> "side" (mercado LATERAL)
+   --------------------------------------------------------------- */
+function checkMovingAverageAlignment(price, ma9, ma20, ma200) {
+  const bullish = price > ma9 && ma9 > ma20 && ma20 > ma200;
+  const bearish = price < ma9 && ma9 < ma20 && ma20 < ma200;
+
+  if (bullish) return "up";
+  if (bearish) return "down";
+  return "side";
+}
+
+/* ---------------------------------------------------------------
+   3) GERADOR DE DADOS MOCK (preço + MM9 + MM20 + MM200)
+   Usa uma onda senoidal por ativo para simular ciclos realistas
+   de alta / baixa / lateralização, com um pouco de ruído.
+   --------------------------------------------------------------- */
+function generateMockPoint(asset) {
+  asset.phase += asset.speed;
+
+  const wave = Math.sin(asset.phase);       // oscila entre -1 e 1
+  const noise = (Math.random() - 0.5) * 0.006;
+
+  const ma200 = asset.base * (1 + noise * 0.3);
+  const ma20 = asset.base * (1 + wave * 0.022 + noise * 0.5);
+  const ma9 = asset.base * (1 + wave * 0.038 + noise);
+  const price = asset.base * (1 + wave * 0.055 + noise * 1.4);
+
+  return { price, ma9, ma20, ma200 };
+}
+
+/* ---------------------------------------------------------------
+   4) ALERTA VISUAL (TOAST) — aparece e some sozinho
+   --------------------------------------------------------------- */
+function showAlert(type, title, message, duration = 4200) {
+  const container = document.getElementById("alertContainer");
+
+  // Limita a 3 alertas visíveis simultaneamente
+  const existing = container.querySelectorAll(".toast");
+  if (existing.length >= 3) existing[0].remove();
+
+  const icons = { up: "📈", down: "📉", side: "⚠️" };
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <span class="toast-icon">${icons[type] || "🔔"}</span>
+    <span class="toast-body">
+      <span class="toast-title">${title}</span>
+      <span class="toast-msg">${message}</span>
+    </span>
+  `;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("leaving");
+    toast.addEventListener("animationend", () => toast.remove(), { once: true });
+  }, duration);
+}
+
+/* ---------------------------------------------------------------
+   5) RENDERIZAÇÃO DOS CARDS
+   --------------------------------------------------------------- */
+function formatPrice(country, value) {
+  return `${CURRENCY[country]} ${value.toFixed(2)}`;
+}
+
+function statusLabel(status) {
+  if (status === "up") return "Tendência de Alta";
+  if (status === "down") return "Tendência de Baixa";
+  return "Lateral";
+}
+
+function verdictText(status, ma9, ma20, ma200) {
+  if (status === "up") return `Preço &gt; <b>MM9</b> &gt; <b>MM20</b> &gt; <b>MM200</b> — alinhamento de alta confirmado.`;
+  if (status === "down") return `Preço &lt; <b>MM9</b> &lt; <b>MM20</b> &lt; <b>MM200</b> — alinhamento de baixa confirmado.`;
+  return `Sem alinhamento consistente entre <b>MM9</b>, <b>MM20</b> e <b>MM200</b>.`;
+}
+
+function maBarWidth(value, allValues) {
+  const max = Math.max(...allValues) * 1.02;
+  const min = Math.min(...allValues) * 0.98;
+  return Math.max(6, Math.min(100, ((value - min) / (max - min)) * 100));
+}
+
+function passesFilters(asset) {
+  if (activeCountry !== "todos" && asset.country !== activeCountry) return false;
+  if (activeSignalFilter !== "todos" && asset.status !== activeSignalFilter) return false;
+  return true;
+}
+
+function renderCards() {
+  const grid = document.getElementById("stockGrid");
+  grid.innerHTML = "";
+
+  const visible = ASSETS.filter(passesFilters);
+
+  if (visible.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <span>🔍</span>
+        <p>Nenhum ativo corresponde aos filtros selecionados.</p>
+      </div>`;
+    return;
+  }
+
+  visible.forEach((asset) => {
+    const { price, ma9, ma20, ma200, changePct, status } = asset;
+    const barValues = [ma9, ma20, ma200];
+
+    const card = document.createElement("div");
+    card.className = `stock-card ${status}`;
+    card.innerHTML = `
+      <div class="stock-top">
+        <div class="stock-id">
+          <span class="stock-flag">${FLAGS[asset.country]}</span>
+          <span>
+            <span class="stock-symbol">${asset.symbol}</span>
+            <span class="stock-name">${asset.name}</span>
+          </span>
+        </div>
+        <span class="stock-badge ${status}">${status === "up" ? "📈" : status === "down" ? "📉" : "➖"} ${statusLabel(status)}</span>
+      </div>
+
+      <div class="stock-price-row">
+        <span class="stock-price">${formatPrice(asset.country, price)}</span>
+        <span class="stock-change ${status}">${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%</span>
+      </div>
+
+      <div class="ma-rows">
+        <div class="ma-row">
+          <span>MM9</span>
+          <div class="ma-track"><div class="ma-fill ma9" style="width:${maBarWidth(ma9, barValues)}%"></div></div>
+          <b>${formatPrice(asset.country, ma9)}</b>
+        </div>
+        <div class="ma-row">
+          <span>MM20</span>
+          <div class="ma-track"><div class="ma-fill ma20" style="width:${maBarWidth(ma20, barValues)}%"></div></div>
+          <b>${formatPrice(asset.country, ma20)}</b>
+        </div>
+        <div class="ma-row">
+          <span>MM200</span>
+          <div class="ma-track"><div class="ma-fill ma200" style="width:${maBarWidth(ma200, barValues)}%"></div></div>
+          <b>${formatPrice(asset.country, ma200)}</b>
+        </div>
+      </div>
+
+      <div class="stock-verdict">${verdictText(status, ma9, ma20, ma200)}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderSummary() {
+  const inScope = ASSETS.filter((a) => activeCountry === "todos" || a.country === activeCountry);
+  const up = inScope.filter((a) => a.status === "up").length;
+  const down = inScope.filter((a) => a.status === "down").length;
+  const side = inScope.filter((a) => a.status === "side").length;
+
+  document.getElementById("countTotal").textContent = inScope.length;
+  document.getElementById("countUp").textContent = up;
+  document.getElementById("countDown").textContent = down;
+  document.getElementById("countSide").textContent = side;
+}
+
+/* ---------------------------------------------------------------
+   6) VERIFICAÇÃO COMPLETA — roda a checagem em todos os ativos
+   Dispara alertas inteligentes apenas quando o status MUDA,
+   evitando poluir a tela com notificações repetidas.
+   --------------------------------------------------------------- */
+function runVerification(showToasts = true) {
+  ASSETS.forEach((asset) => {
+    const { price, ma9, ma20, ma200 } = generateMockPoint(asset);
+    const newStatus = checkMovingAverageAlignment(price, ma9, ma20, ma200);
+    const changePct = ((price - asset.lastPrice) / asset.lastPrice) * 100;
+
+    const statusChanged = newStatus !== asset.status;
+
+    asset.price = price;
+    asset.ma9 = ma9;
+    asset.ma20 = ma20;
+    asset.ma200 = ma200;
+    asset.changePct = changePct;
+    asset.lastPrice = price;
+
+    if (statusChanged && showToasts) {
+      if (newStatus === "up") {
+        showAlert("up", `${asset.symbol} em ALTA`, "Preço rompeu acima de MM9 › MM20 › MM200.");
+      } else if (newStatus === "down") {
+        showAlert("down", `${asset.symbol} em BAIXA`, "Preço rompeu abaixo de MM9 › MM20 › MM200.");
+      } else {
+        showAlert("side", `${asset.symbol} lateralizou`, "Médias móveis perderam o alinhamento anterior.");
+      }
+    }
+
+    asset.status = newStatus;
+  });
+
+  renderSummary();
+  renderCards();
+  document.getElementById("lastCheck").textContent =
+    "última verificação: " + new Date().toLocaleTimeString("pt-BR", { hour12: false });
+}
+
+/* ---------------------------------------------------------------
+   7) RELÓGIO E STATUS DE MERCADO
+   --------------------------------------------------------------- */
+function updateClock() {
+  const now = new Date();
+  document.getElementById("clock").textContent = now.toLocaleTimeString("pt-BR", { hour12: false });
+  const isWeekday = now.getDay() >= 1 && now.getDay() <= 5;
+  const isOpenHours = now.getHours() >= 9 && now.getHours() < 18;
+  document.getElementById("marketStatus").textContent = isWeekday && isOpenHours ? "Aberto" : "Fechado";
+}
+
+/* ---------------------------------------------------------------
+   8) AUTO-VERIFICAÇÃO A CADA 10 SEGUNDOS
+   --------------------------------------------------------------- */
+function startAutoVerification() {
+  if (autoTimer) clearInterval(autoTimer);
+  autoTimer = setInterval(() => runVerification(true), 10000);
+}
+function stopAutoVerification() {
+  if (autoTimer) clearInterval(autoTimer);
+  autoTimer = null;
+}
+
+/* ---------------------------------------------------------------
+   9) FILTROS E BOTÕES
+   --------------------------------------------------------------- */
+function setupFilters() {
+  document.querySelectorAll("#signalFilters .chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#signalFilters .chip").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeSignalFilter = btn.dataset.filter;
+      renderCards();
+    });
+  });
+
+  document.querySelectorAll("#countryFilters .chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#countryFilters .chip").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeCountry = btn.dataset.country;
+      renderSummary();
+      renderCards();
+    });
+  });
+
+  document.getElementById("btnVerify").addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    btn.classList.add("busy");
+    btn.disabled = true;
+    setTimeout(() => {
+      runVerification(true);
+      btn.classList.remove("busy");
+      btn.disabled = false;
+    }, 450);
+  });
+
+  document.getElementById("btnAuto").addEventListener("click", (e) => {
+    autoModeOn = !autoModeOn;
+    document.getElementById("autoState").textContent = autoModeOn ? "ligado" : "desligado";
+    if (autoModeOn) {
+      startAutoVerification();
+      showAlert("side", "Auto-verificação ativada", "Nova checagem a cada 10 segundos.", 3000);
+    } else {
+      stopAutoVerification();
+      showAlert("side", "Auto-verificação pausada", "Use \"Verificar agora\" para checar manualmente.", 3000);
+    }
+  });
+
+  document.querySelectorAll(".nav a").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      document.querySelectorAll(".nav a").forEach((l) => l.classList.remove("active"));
+      link.classList.add("active");
+      const target = link.dataset.nav;
+
+      document.querySelectorAll("#signalFilters .chip").forEach((b) => b.classList.remove("active"));
+      if (target === "alertas") {
+        activeSignalFilter = "up";
+        document.querySelector('#signalFilters .chip[data-filter="up"]').classList.add("active");
+      } else {
+        activeSignalFilter = "todos";
+        document.querySelector('#signalFilters .chip[data-filter="todos"]').classList.add("active");
+      }
+      renderCards();
+    });
+  });
+}
+
+/* ---------------------------------------------------------------
+   10) AVISO LEGAL — fechar e lembrar durante a sessão
+   --------------------------------------------------------------- */
+function setupDisclaimer() {
+  const banner = document.getElementById("disclaimer");
+  const closeBtn = document.getElementById("disclaimerClose");
+  try {
+    if (sessionStorage.getItem("dminvest_disclaimer_dismissed") === "1") {
+      banner.classList.add("hidden");
+    }
+  } catch (e) { /* sessionStorage indisponível — aviso permanece visível */ }
+
+  closeBtn.addEventListener("click", () => {
+    banner.classList.add("hidden");
+    try { sessionStorage.setItem("dminvest_disclaimer_dismissed", "1"); } catch (e) {}
+  });
+}
+
+/* ---------------------------------------------------------------
+   11) ANIMAÇÃO AO ROLAR A PÁGINA (fade + subir)
+   --------------------------------------------------------------- */
+function setupScrollReveal() {
+  const targets = document.querySelectorAll(".reveal");
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.12 }
+  );
+  targets.forEach((t) => observer.observe(t));
+}
+
+/* ---------------------------------------------------------------
+   12) INICIALIZAÇÃO
+   --------------------------------------------------------------- */
+function init() {
+  setupFilters();
+  setupDisclaimer();
+  setupScrollReveal();
+
+  runVerification(false);   // primeira checagem, sem disparar toasts
+  updateClock();
+  setInterval(updateClock, 1000);
+  startAutoVerification();
+
+  setTimeout(() => {
+    showAlert("up", "Scanner iniciado", "Monitorando MM9 · MM20 · MM200 em tempo simulado.", 3600);
+  }, 600);
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
 </body>
 </html>
