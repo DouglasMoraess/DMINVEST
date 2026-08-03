@@ -883,11 +883,16 @@ async function fetchClosesBR(symbol, tf) {
   const intervalMap = { "15M": "15m", "60M": "60m", D: "1d" };
   const rangeMap = { "15M": "3mo", "60M": "3mo", D: "2y" };
 
-  const url = `https://brapi.dev/api/v2/stocks/historical?symbols=${symbol}&range=${rangeMap[tf]}&interval=${intervalMap[tf]}`;
-  const headers = BRAPI_TOKEN && !BRAPI_TOKEN.startsWith("COLE_") ? { Authorization: `Bearer ${BRAPI_TOKEN}` } : {};
+  const hasToken = BRAPI_TOKEN && !BRAPI_TOKEN.startsWith("COLE_");
+  const tokenParam = hasToken ? `&token=${BRAPI_TOKEN}` : "";
+  const url = `https://brapi.dev/api/v2/stocks/historical?symbols=${symbol}&range=${rangeMap[tf]}&interval=${intervalMap[tf]}${tokenParam}`;
+  const headers = hasToken ? { Authorization: `Bearer ${BRAPI_TOKEN}` } : {};
 
   const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error(`brapi HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`brapi HTTP ${res.status} — ${body.slice(0, 200)}`);
+  }
   const json = await res.json();
   const bars = json?.results?.[0]?.data?.historicalDataPrice;
   if (!bars || !bars.length) throw new Error("brapi: sem histórico retornado");
@@ -929,11 +934,16 @@ async function fetchClosesUSBatch(symbols, tf) {
    o preço mostrado vem da cotação "ao vivo" de cada API.
    --------------------------------------------------------------- */
 async function fetchLivePriceBR(symbols) {
-  const url = `https://brapi.dev/api/v2/stocks/quote?symbols=${symbols.join(",")}`;
-  const headers = BRAPI_TOKEN && !BRAPI_TOKEN.startsWith("COLE_") ? { Authorization: `Bearer ${BRAPI_TOKEN}` } : {};
+  const hasToken = BRAPI_TOKEN && !BRAPI_TOKEN.startsWith("COLE_");
+  const tokenParam = hasToken ? `&token=${BRAPI_TOKEN}` : "";
+  const url = `https://brapi.dev/api/v2/stocks/quote?symbols=${symbols.join(",")}${tokenParam}`;
+  const headers = hasToken ? { Authorization: `Bearer ${BRAPI_TOKEN}` } : {};
 
   const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error(`brapi quote HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`brapi quote HTTP ${res.status} — ${body.slice(0, 200)}`);
+  }
   const json = await res.json();
   const out = {};
 
