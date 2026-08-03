@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DM INVEST — Scanner Inteligente de Médias Móveis</title>
+<title>DM INVEST</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -576,7 +576,6 @@
     </div>
     <div class="brand-text">
       <span class="brand-title">DM <span>INVEST</span></span>
-      <span class="brand-sub">Scanner Inteligente · Médias Móveis</span>
     </div>
   </div>
 
@@ -594,17 +593,6 @@
 </header>
 
 <!-- ================= DISCLAIMER ================= -->
-<div class="disclaimer" id="disclaimer">
-  <p>
-    <b>Aviso legal:</b> a DM INVEST é uma ferramenta educacional de estudo sobre médias móveis (MM9, MM20, MM200).
-    Os preços e médias técnicas podem vir de APIs de terceiros (brapi.dev e Twelve Data) quando configuradas, mas
-    os indicadores fundamentalistas (P/L, P/VP, ROE, Dividend Yield, margem e dívida/patrimônio) são
-    <b>ilustrativos</b>. Em nenhuma hipótese o conteúdo aqui apresentado constitui recomendação, análise ou
-    oferta de investimento (Resolução CVM nº 20/2021). Dados de terceiros podem falhar, atrasar ou conter erros.
-    Consulte sempre um profissional certificado antes de investir.
-  </p>
-  <button class="disclaimer-close" id="disclaimerClose" aria-label="Fechar aviso">✕</button>
-</div>
 
 <!-- ================= ALERTAS (TOASTS) ================= -->
 <div id="alertContainer" aria-live="polite"></div>
@@ -1429,24 +1417,6 @@ function setupFilters() {
 }
 
 /* ---------------------------------------------------------------
-   10) AVISO LEGAL — fechar e lembrar durante a sessão
-   --------------------------------------------------------------- */
-function setupDisclaimer() {
-  const banner = document.getElementById("disclaimer");
-  const closeBtn = document.getElementById("disclaimerClose");
-  try {
-    if (sessionStorage.getItem("dminvest_disclaimer_dismissed") === "1") {
-      banner.classList.add("hidden");
-    }
-  } catch (e) { /* sessionStorage indisponível — aviso permanece visível */ }
-
-  closeBtn.addEventListener("click", () => {
-    banner.classList.add("hidden");
-    try { sessionStorage.setItem("dminvest_disclaimer_dismissed", "1"); } catch (e) {}
-  });
-}
-
-/* ---------------------------------------------------------------
    11) ANIMAÇÃO AO ROLAR A PÁGINA (fade + subir)
    --------------------------------------------------------------- */
 function setupScrollReveal() {
@@ -1470,7 +1440,6 @@ function setupScrollReveal() {
    --------------------------------------------------------------- */
 function init() {
   setupFilters();
-  setupDisclaimer();
   setupScrollReveal();
 
   renderSummary();
@@ -1482,7 +1451,7 @@ function init() {
   startAutoVerification();
 
   setTimeout(() => {
-    showAlert("up", "Scanner iniciado", "Buscando dados reais (brapi.dev / Twelve Data)...", 3600);
+    showAlert("up", "DM INVEST iniciado", "Buscando dados reais (brapi.dev / Twelve Data)...", 3600);
   }, 600);
 }
 
