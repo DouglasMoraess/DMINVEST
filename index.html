@@ -648,9 +648,6 @@
       <button class="btn btn-primary" id="btnVerify">
         <span class="btn-ic">⟳</span> Verificar agora
       </button>
-      <button class="btn btn-ghost" id="btnAuto">
-        <span class="btn-ic">⏱</span> Auto: <span id="autoState">ligado</span>
-      </button>
     </div>
   </section>
 
@@ -739,8 +736,6 @@ const CURRENCY = { BR: "R$", US: "$" };
 
 let activeSignalFilter = "todos";
 let activeCountry = "todos";
-let autoModeOn = true;
-let autoTimer = null;
 
 /* ---------------------------------------------------------------
    2b) FUNÇÃO DE ANÁLISE FUNDAMENTALISTA (resumida)
@@ -1452,21 +1447,6 @@ function updateClock() {
 }
 
 /* ---------------------------------------------------------------
-   8) AUTO-VERIFICAÇÃO A CADA 10 SEGUNDOS
-   --------------------------------------------------------------- */
-const AUTO_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 horas
-
-function startAutoVerification() {
-  if (autoTimer) clearInterval(autoTimer);
-  // Verificação automática a cada 4 horas (dá bastante folga nos limites das APIs grátis)
-  autoTimer = setInterval(() => runVerification(true), AUTO_INTERVAL_MS);
-}
-function stopAutoVerification() {
-  if (autoTimer) clearInterval(autoTimer);
-  autoTimer = null;
-}
-
-/* ---------------------------------------------------------------
    9) FILTROS E BOTÕES
    --------------------------------------------------------------- */
 function setupFilters() {
@@ -1498,18 +1478,6 @@ function setupFilters() {
     } finally {
       btn.classList.remove("busy");
       btn.disabled = false;
-    }
-  });
-
-  document.getElementById("btnAuto").addEventListener("click", (e) => {
-    autoModeOn = !autoModeOn;
-    document.getElementById("autoState").textContent = autoModeOn ? "ligado" : "desligado";
-    if (autoModeOn) {
-      startAutoVerification();
-      showAlert("side", "Auto-verificação ativada", "Nova checagem a cada 4 horas.", 3000);
-    } else {
-      stopAutoVerification();
-      showAlert("side", "Auto-verificação pausada", "Use \"Verificar agora\" para checar manualmente.", 3000);
     }
   });
 
@@ -1560,33 +1528,25 @@ function init() {
   setupScrollReveal();
 
   const cached = loadSnapshotFromStorage();
-  let needsImmediateFetch = true;
 
   if (cached) {
     applySnapshotToAssets(cached);
-    const elapsed = Date.now() - cached.savedAt;
-    if (elapsed < AUTO_INTERVAL_MS) {
-      needsImmediateFetch = false;
-      document.getElementById("lastCheck").textContent =
-        "última verificação: " + new Date(cached.savedAt).toLocaleTimeString("pt-BR", { hour12: false }) + " (dados salvos)";
-    }
+    document.getElementById("lastCheck").textContent =
+      "última verificação: " + new Date(cached.savedAt).toLocaleTimeString("pt-BR", { hour12: false }) + " (dados salvos)";
+  } else {
+    document.getElementById("lastCheck").textContent = "nenhuma verificação ainda — clique em \"Verificar agora\"";
   }
 
   renderSummary();
-  renderCards(); // já mostra os últimos dados salvos, sem esperar nenhuma busca
-
-  if (needsImmediateFetch) {
-    runVerification(false).catch((err) => console.error("Erro na verificação inicial:", err));
-  }
+  renderCards(); // mostra os últimos dados salvos (ou o estado vazio, se nunca verificou)
 
   updateClock();
   setInterval(updateClock, 1000);
-  startAutoVerification();
 
   setTimeout(() => {
-    const msg = needsImmediateFetch
-      ? "Buscando dados reais (brapi.dev / Twelve Data)..."
-      : "Mostrando os últimos dados salvos neste navegador.";
+    const msg = cached
+      ? "Mostrando os últimos dados salvos neste navegador."
+      : "Clique em \"Verificar agora\" para buscar os dados pela primeira vez.";
     showAlert("up", "DM INVEST iniciado", msg, 3600);
   }, 600);
 }
