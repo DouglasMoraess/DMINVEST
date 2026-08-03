@@ -391,6 +391,66 @@
   }
   .stock-verdict b { color: var(--text-main); }
 
+  /* ---------- Bloco de Análise Fundamentalista ---------- */
+  .fund-block {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .fund-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+  .fund-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-sub);
+    letter-spacing: 0.2px;
+  }
+  .fund-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .fund-badge.solid { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,227,154,0.35); }
+  .fund-badge.neutral { background: var(--gray-accent-dim); color: var(--gray-accent); border: 1px solid rgba(154,162,175,0.35); }
+  .fund-badge.warn { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,77,94,0.35); }
+
+  .fund-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+  .fund-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 6px 11px;
+    border-radius: 999px;
+    line-height: 1.2;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-soft);
+    color: var(--text-main);
+  }
+  .fund-pill-icon { font-size: 13px; }
+  .fund-pill.solid { background: var(--green-dim); border-color: rgba(0,227,154,0.3); }
+  .fund-pill.neutral { background: var(--gray-accent-dim); border-color: rgba(154,162,175,0.3); }
+  .fund-pill.warn { background: var(--red-dim); border-color: rgba(255,77,94,0.3); }
+
+  .fund-note {
+    font-size: 11.5px;
+    color: var(--text-sub);
+    line-height: 1.5;
+  }
+
   .empty-state {
     text-align: center;
     padding: 70px 20px;
@@ -521,8 +581,9 @@
 <!-- ================= DISCLAIMER ================= -->
 <div class="disclaimer" id="disclaimer">
   <p>
-    <b>Aviso legal:</b> a DM INVEST é uma ferramenta educacional de estudo sobre médias móveis (MM9, MM20, MM200).
-    Preços e alertas são <b>simulados</b> e gerados por <b>regras matemáticas automáticas</b> — não constituem
+    <b>Aviso legal:</b> a DM INVEST é uma ferramenta educacional de estudo sobre médias móveis (MM9, MM20, MM200)
+    e indicadores fundamentalistas. Preços, médias e indicadores (P/L, P/VP, ROE, Dividend Yield, margem e
+    dívida/patrimônio) são <b>simulados/ilustrativos</b> e gerados por <b>regras automáticas</b> — não constituem
     recomendação, análise ou oferta de investimento (Resolução CVM nº 20/2021). Consulte sempre um profissional
     certificado antes de investir.
   </p>
@@ -624,7 +685,27 @@
    ============================================================= */
 
 /* ---------------------------------------------------------------
-   1) BASE DE ATIVOS (mock)
+   1) DADOS FUNDAMENTALISTAS (mock / ilustrativos)
+   Valores aproximados apenas para fins didáticos — NÃO representam
+   os números reais e atuais das empresas. Métricas: P/L, P/VP,
+   ROE (%), Dividend Yield (%), Margem Líquida (%) e Dívida/Patrimônio.
+   --------------------------------------------------------------- */
+const FUNDAMENTALS = {
+  PETR4: { pl: 4.8,  pvp: 1.3, roe: 27.4, dy: 11.2, margem: 18.9, divPatrim: 0.62 },
+  VALE3: { pl: 6.1,  pvp: 1.7, roe: 24.8, dy: 9.4,  margem: 21.3, divPatrim: 0.55 },
+  ITUB4: { pl: 9.3,  pvp: 1.9, roe: 21.6, dy: 6.8,  margem: 24.1, divPatrim: 1.10 },
+  BBAS3: { pl: 5.4,  pvp: 1.0, roe: 19.8, dy: 8.5,  margem: 20.7, divPatrim: 1.25 },
+  WEGE3: { pl: 28.5, pvp: 8.9, roe: 30.2, dy: 1.4,  margem: 15.8, divPatrim: 0.18 },
+  MGLU3: { pl: -12.4,pvp: 2.1, roe: -6.8, dy: 0.0,  margem: -2.3, divPatrim: 1.85 },
+  AAPL:  { pl: 31.2, pvp: 47.6,roe: 145.0,dy: 0.5,  margem: 26.4, divPatrim: 1.75 },
+  TSLA:  { pl: 68.4, pvp: 11.2,roe: 16.9, dy: 0.0,  margem: 8.2,  divPatrim: 0.17 },
+  MSFT:  { pl: 34.7, pvp: 11.8,roe: 34.5, dy: 0.8,  margem: 35.6, divPatrim: 0.42 },
+  NVDA:  { pl: 46.3, pvp: 34.1,roe: 91.2, dy: 0.03, margem: 48.9, divPatrim: 0.24 },
+  GOOGL: { pl: 24.8, pvp: 6.4, roe: 27.1, dy: 0.4,  margem: 27.8, divPatrim: 0.08 },
+};
+
+/* ---------------------------------------------------------------
+   2) BASE DE ATIVOS (mock)
    Cada ativo tem um preço-base e uma "fase" própria que oscila
    ao longo do tempo, simulando ciclos de alta, baixa e lateralização.
    --------------------------------------------------------------- */
@@ -646,6 +727,7 @@ const ASSETS = [
   speed: 0.10 + Math.random() * 0.12,      // velocidade do ciclo (varia por ativo)
   status: "side",                          // estado anterior (para detectar mudanças)
   lastPrice: a.base,
+  fund: FUNDAMENTALS[a.symbol],            // dados fundamentalistas ilustrativos
 }));
 
 const FLAGS = { BR: "🇧🇷", US: "🇺🇸" };
@@ -655,6 +737,103 @@ let activeSignalFilter = "todos";
 let activeCountry = "todos";
 let autoModeOn = true;
 let autoTimer = null;
+
+/* ---------------------------------------------------------------
+   2b) FUNÇÃO DE ANÁLISE FUNDAMENTALISTA (resumida)
+   Classifica o ativo em "sólido", "neutro" ou "atenção" a partir
+   de um conjunto simples de regras sobre os indicadores mock.
+   --------------------------------------------------------------- */
+function analyzeFundamentals(f) {
+  let score = 0;
+
+  if (f.roe >= 15) score += 1;
+  if (f.roe < 5) score -= 1;
+
+  if (f.margem >= 15) score += 1;
+  if (f.margem < 0) score -= 2;
+
+  if (f.divPatrim <= 1) score += 1;
+  if (f.divPatrim > 1.5) score -= 1;
+
+  if (f.dy >= 4) score += 1;
+
+  if (f.pl < 0) score -= 2;
+
+  let tier, label, note;
+  if (score >= 2) {
+    tier = "solid";
+    label = "Fundamentos Sólidos";
+    note = "Rentabilidade e endividamento em níveis saudáveis.";
+  } else if (score <= -2) {
+    tier = "warn";
+    label = "Ponto de Atenção";
+    note = "Indicadores sugerem cautela (rentabilidade ou dívida).";
+  } else {
+    tier = "neutral";
+    label = "Fundamentos Neutros";
+    note = "Indicadores dentro da média, sem destaque claro.";
+  }
+
+  return { tier, label, note };
+}
+
+/* ---------------------------------------------------------------
+   2b-ii) VERSÃO SIMPLES DOS FUNDAMENTOS (linguagem do dia a dia)
+   Traduz os números técnicos em frases fáceis de entender,
+   para somar com o resto do painel sem exigir conhecimento prévio.
+   --------------------------------------------------------------- */
+function simplifyFundamentals(f) {
+  const items = [];
+
+  // Lucratividade (margem líquida)
+  if (f.margem < 0) {
+    items.push({ icon: "💰", tone: "warn", text: "Está no prejuízo" });
+  } else if (f.margem >= 15) {
+    items.push({ icon: "💰", tone: "solid", text: `Lucra bem (${f.margem.toFixed(1)}% de margem)` });
+  } else {
+    items.push({ icon: "💰", tone: "neutral", text: `Lucra pouco (${f.margem.toFixed(1)}% de margem)` });
+  }
+
+  // Endividamento (dívida / patrimônio)
+  if (f.divPatrim <= 0.5) {
+    items.push({ icon: "🏦", tone: "solid", text: "Dívida baixa" });
+  } else if (f.divPatrim <= 1.5) {
+    items.push({ icon: "🏦", tone: "neutral", text: "Dívida moderada" });
+  } else {
+    items.push({ icon: "🏦", tone: "warn", text: "Dívida alta" });
+  }
+
+  // Retorno para quem investe (ROE)
+  if (f.roe >= 15) {
+    items.push({ icon: "📈", tone: "solid", text: "Bom retorno ao acionista" });
+  } else if (f.roe >= 5) {
+    items.push({ icon: "📈", tone: "neutral", text: "Retorno mediano" });
+  } else {
+    items.push({ icon: "📈", tone: "warn", text: "Retorno fraco" });
+  }
+
+  // Dividendos (dividend yield)
+  if (f.dy >= 4) {
+    items.push({ icon: "💵", tone: "solid", text: `Paga bons dividendos (${f.dy.toFixed(1)}%)` });
+  } else if (f.dy > 0) {
+    items.push({ icon: "💵", tone: "neutral", text: "Paga poucos dividendos" });
+  } else {
+    items.push({ icon: "💵", tone: "neutral", text: "Não paga dividendos" });
+  }
+
+  // Preço em relação ao lucro (P/L), em linguagem simples
+  if (f.pl < 0) {
+    items.push({ icon: "🏷️", tone: "warn", text: "Sem lucro para comparar o preço" });
+  } else if (f.pl < 10) {
+    items.push({ icon: "🏷️", tone: "solid", text: "Preço parece barato" });
+  } else if (f.pl <= 25) {
+    items.push({ icon: "🏷️", tone: "neutral", text: "Preço parece justo" });
+  } else {
+    items.push({ icon: "🏷️", tone: "warn", text: "Preço parece caro" });
+  }
+
+  return items;
+}
 
 /* ---------------------------------------------------------------
    2) FUNÇÃO PRINCIPAL — VERIFICA ALINHAMENTO DAS MÉDIAS MÓVEIS
@@ -808,9 +987,41 @@ function renderCards() {
       </div>
 
       <div class="stock-verdict">${verdictText(status, ma9, ma20, ma200)}</div>
+
+      ${renderFundamentalsBlock(asset)}
     `;
     grid.appendChild(card);
   });
+}
+
+/* ---------------------------------------------------------------
+   6b) BLOCO DE ANÁLISE FUNDAMENTALISTA (resumo por ativo)
+   --------------------------------------------------------------- */
+function renderFundamentalsBlock(asset) {
+  const f = asset.fund;
+  if (!f) return "";
+
+  const result = analyzeFundamentals(f);
+  const simple = simplifyFundamentals(f);
+
+  const pillsHTML = simple
+    .map((item) => `
+      <div class="fund-pill ${item.tone}">
+        <span class="fund-pill-icon">${item.icon}</span>
+        <span class="fund-pill-text">${item.text}</span>
+      </div>`)
+    .join("");
+
+  return `
+    <div class="fund-block">
+      <div class="fund-header">
+        <span class="fund-title">📊 Análise Fundamentalista</span>
+        <span class="fund-badge ${result.tier}">${result.label}</span>
+      </div>
+      <div class="fund-pills">${pillsHTML}</div>
+      <p class="fund-note">${result.note}</p>
+    </div>
+  `;
 }
 
 function renderSummary() {
