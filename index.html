@@ -923,12 +923,68 @@ async function fetchClosesUSBatch(symbols, tf) {
 /* ---------------------------------------------------------------
    ORQUESTRA A BUSCA COMPLETA (todos os ativos, 3 timeframes)
    --------------------------------------------------------------- */
+/* ---------------------------------------------------------------
+   COTAÇÃO EM TEMPO REAL (preço exibido no card)
+   Separado do histórico: o histórico serve só pra calcular as médias;
+   o preço mostrado vem da cotação "ao vivo" de cada API.
+   --------------------------------------------------------------- */
+async function fetchLivePriceUS(symbols) {
+  const url = `https://api.twelvedata.com/price?symbol=${symbols.join(",")}&apikey=${TWELVE_DATA_KEY}`;
+  const res = await fetch(url);
+  const json = await res.json();
+  const out = {};
+
+  if (json.price) {
+    out[symbols[0]] = parseFloat(json.price);
+  } else {
+    symbols.forEach((sym) => {
+      const entry = json[sym];
+      out[sym] = entry && entry.price ? parseFloat(entry.price) : null;
+    });
+  }
+  return out;
+}
+
+async function fetchLivePriceBR(symbols) {
+  const url = `https://brapi.dev/api/v2/stocks/quote?symbols=${symbols.join(",")}`;
+  const headers = BRAPI_TOKEN && !BRAPI_TOKEN.startsWith("COLE_") ? { Authorization: `Bearer ${BRAPI_TOKEN}` } : {};
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(`brapi quote HTTP ${res.status}`);
+  const json = await res.json();
+  const out = {};
+
+  (json.results || []).forEach((item) => {
+    const price = item?.data?.regularMarketPrice;
+    out[item.symbol] = typeof price === "number" ? price : null;
+  });
+  return out;
+}
+
 async function fetchAllMarketData() {
   const closesMap = {};
+  const priceMap = {};
   const brAssets = ASSETS.filter((a) => a.country === "BR");
   const usSymbols = ASSETS.filter((a) => a.country === "US").map((a) => a.symbol);
+  const brSymbols = brAssets.map((a) => a.symbol);
 
-  // EUA em lote — 3 chamadas no total (uma por timeframe)
+  // Cotação AO VIVO — EUA (1 chamada em lote)
+  try {
+    Object.assign(priceMap, await fetchLivePriceUS(usSymbols));
+  } catch (err) {
+    console.error("Erro cotação Twelve Data", err);
+  }
+  await sleep(1200);
+
+  // Cotação AO VIVO — Brasil (1 chamada em lote)
+  try {
+    Object.assign(priceMap, await fetchLivePriceBR(brSymbols));
+  } catch (err) {
+    console.error("Erro cotação brapi.dev", err);
+  }
+  await sleep(300);
+
+  // HISTÓRICO — EUA em lote — 3 chamadas no total (uma por timeframe)
   for (const tf of ["15M", "60M", "D"]) {
     try {
       const batch = await fetchClosesUSBatch(usSymbols, tf);
@@ -942,7 +998,7 @@ async function fetchAllMarketData() {
     await sleep(1200); // respeita o limite de créditos/minuto do plano grátis
   }
 
-  // Brasil — um ativo por vez (brapi.dev)
+  // HISTÓRICO — Brasil, um ativo por vez (brapi.dev)
   for (const asset of brAssets) {
     closesMap[asset.symbol] = closesMap[asset.symbol] || {};
     for (const tf of ["15M", "60M", "D"]) {
@@ -956,7 +1012,7 @@ async function fetchAllMarketData() {
     }
   }
 
-  return closesMap;
+  return { closesMap, priceMap };
 }
 
 /* ---------------------------------------------------------------
@@ -980,10 +1036,10 @@ function smaLast(closes, period) {
    MONTA O "SNAPSHOT" DE UM TIMEFRAME A PARTIR DOS FECHAMENTOS REAIS
    (mesma estrutura e mesmas regras de antes — só a origem do dado mudou)
    --------------------------------------------------------------- */
-function computeSnapshotFromCloses(closes, tf) {
+function computeSnapshotFromCloses(closes, tf, livePrice) {
   if (!closes || closes.length < 21) return { tf, direction: null, insufficientData: true };
 
-  const price = closes[closes.length - 1];
+  const price = (typeof livePrice === "number" && Number.isFinite(livePrice)) ? livePrice : closes[closes.length - 1];
   const ema9 = emaLast(closes, 9);
   const ema20 = emaLast(closes, 20);
 
@@ -1260,9 +1316,9 @@ function renderSummary() {
    evitando poluir a tela com notificações repetidas.
    --------------------------------------------------------------- */
 async function runVerification(showToasts = true) {
-  let closesMap;
+  let closesMap, priceMap;
   try {
-    closesMap = await fetchAllMarketData();
+    ({ closesMap, priceMap } = await fetchAllMarketData());
   } catch (err) {
     console.error("Falha geral ao buscar dados de mercado:", err);
     showAlert("side", "Erro ao buscar dados", "Verifique sua conexão e as chaves de API configuradas.", 6000);
@@ -1271,9 +1327,10 @@ async function runVerification(showToasts = true) {
 
   ASSETS.forEach((asset) => {
     const c = closesMap[asset.symbol] || {};
-    const tf15 = computeSnapshotFromCloses(c["15M"], "15M");
-    const tf60 = computeSnapshotFromCloses(c["60M"], "60M");
-    const tfD  = computeSnapshotFromCloses(c["D"], "D");
+    const livePrice = priceMap[asset.symbol];
+    const tf15 = computeSnapshotFromCloses(c["15M"], "15M", livePrice);
+    const tf60 = computeSnapshotFromCloses(c["60M"], "60M", livePrice);
+    const tfD  = computeSnapshotFromCloses(c["D"], "D", livePrice);
     const data = classifyFromSnapshots(tf15, tf60, tfD);
 
     if (data.price == null) {
