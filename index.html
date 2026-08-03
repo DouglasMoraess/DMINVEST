@@ -936,21 +936,28 @@ async function fetchClosesUSBatch(symbols, tf) {
 async function fetchLivePriceBR(symbols) {
   const hasToken = BRAPI_TOKEN && !BRAPI_TOKEN.startsWith("COLE_");
   const tokenParam = hasToken ? `&token=${BRAPI_TOKEN}` : "";
-  const url = `https://brapi.dev/api/v2/stocks/quote?symbols=${symbols.join(",")}${tokenParam}`;
   const headers = hasToken ? { Authorization: `Bearer ${BRAPI_TOKEN}` } : {};
-
-  const res = await fetch(url, { headers });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`brapi quote HTTP ${res.status} — ${body.slice(0, 200)}`);
-  }
-  const json = await res.json();
   const out = {};
 
-  (json.results || []).forEach((item) => {
-    const price = item?.data?.regularMarketPrice;
-    out[item.symbol] = typeof price === "number" ? price : null;
-  });
+  // Este plano da brapi.dev só aceita 1 ativo por requisição nesse endpoint
+  for (const symbol of symbols) {
+    try {
+      const url = `https://brapi.dev/api/v2/stocks/quote?symbols=${symbol}${tokenParam}`;
+      const res = await fetch(url, { headers });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`brapi quote HTTP ${res.status} — ${body.slice(0, 200)}`);
+      }
+      const json = await res.json();
+      const price = json?.results?.[0]?.data?.regularMarketPrice;
+      out[symbol] = typeof price === "number" ? price : null;
+    } catch (err) {
+      console.error("Erro cotação brapi.dev", symbol, err);
+      out[symbol] = null;
+    }
+    await sleep(250);
+  }
+
   return out;
 }
 
