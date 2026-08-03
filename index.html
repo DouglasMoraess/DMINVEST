@@ -1303,6 +1303,58 @@ function renderSummary() {
    Dispara alertas inteligentes apenas quando o status MUDA,
    evitando poluir a tela com notificações repetidas.
    --------------------------------------------------------------- */
+/* ---------------------------------------------------------------
+   PERSISTÊNCIA LOCAL — guarda o último resultado no navegador
+   pra continuar mostrando os dados mesmo depois de fechar a aba,
+   até a próxima verificação real acontecer.
+   --------------------------------------------------------------- */
+const STORAGE_KEY = "dminvest_market_snapshot_v1";
+
+function saveSnapshotToStorage() {
+  try {
+    const snapshot = { savedAt: Date.now(), assets: {} };
+    ASSETS.forEach((a) => {
+      snapshot.assets[a.symbol] = {
+        price: a.price,
+        changePct: a.changePct,
+        lastPrice: a.lastPrice,
+        status: a.status,
+        confluence: a.confluence,
+        setup: a.setup,
+        dataError: a.dataError,
+      };
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+  } catch (err) {
+    console.error("Não foi possível salvar os dados localmente:", err);
+  }
+}
+
+function loadSnapshotFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.error("Não foi possível ler os dados salvos localmente:", err);
+    return null;
+  }
+}
+
+function applySnapshotToAssets(snapshot) {
+  if (!snapshot || !snapshot.assets) return;
+  ASSETS.forEach((a) => {
+    const saved = snapshot.assets[a.symbol];
+    if (!saved) return;
+    a.price = saved.price;
+    a.changePct = saved.changePct;
+    a.lastPrice = saved.lastPrice ?? a.lastPrice;
+    a.status = saved.status ?? a.status;
+    a.confluence = !!saved.confluence;
+    a.setup = saved.setup ?? null;
+    a.dataError = !!saved.dataError;
+  });
+}
+
 async function runVerification(showToasts = true) {
   let closesMap, priceMap;
   try {
@@ -1366,6 +1418,7 @@ async function runVerification(showToasts = true) {
 
   renderSummary();
   renderCards();
+  saveSnapshotToStorage();
   document.getElementById("lastCheck").textContent =
     "última verificação: " + new Date().toLocaleTimeString("pt-BR", { hour12: false });
 }
@@ -1384,10 +1437,12 @@ function updateClock() {
 /* ---------------------------------------------------------------
    8) AUTO-VERIFICAÇÃO A CADA 10 SEGUNDOS
    --------------------------------------------------------------- */
+const AUTO_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 horas
+
 function startAutoVerification() {
   if (autoTimer) clearInterval(autoTimer);
   // Verificação automática a cada 4 horas (dá bastante folga nos limites das APIs grátis)
-  autoTimer = setInterval(() => runVerification(true), 4 * 60 * 60 * 1000);
+  autoTimer = setInterval(() => runVerification(true), AUTO_INTERVAL_MS);
 }
 function stopAutoVerification() {
   if (autoTimer) clearInterval(autoTimer);
@@ -1487,16 +1542,35 @@ function init() {
   setupFilters();
   setupScrollReveal();
 
-  renderSummary();
-  renderCards(); // mostra os cards em estado "dados indisponíveis" enquanto a 1ª busca real roda
+  const cached = loadSnapshotFromStorage();
+  let needsImmediateFetch = true;
 
-  runVerification(false).catch((err) => console.error("Erro na verificação inicial:", err));
+  if (cached) {
+    applySnapshotToAssets(cached);
+    const elapsed = Date.now() - cached.savedAt;
+    if (elapsed < AUTO_INTERVAL_MS) {
+      needsImmediateFetch = false;
+      document.getElementById("lastCheck").textContent =
+        "última verificação: " + new Date(cached.savedAt).toLocaleTimeString("pt-BR", { hour12: false }) + " (dados salvos)";
+    }
+  }
+
+  renderSummary();
+  renderCards(); // já mostra os últimos dados salvos, sem esperar nenhuma busca
+
+  if (needsImmediateFetch) {
+    runVerification(false).catch((err) => console.error("Erro na verificação inicial:", err));
+  }
+
   updateClock();
   setInterval(updateClock, 1000);
   startAutoVerification();
 
   setTimeout(() => {
-    showAlert("up", "DM INVEST iniciado", "Buscando dados reais (brapi.dev / Twelve Data)...", 3600);
+    const msg = needsImmediateFetch
+      ? "Buscando dados reais (brapi.dev / Twelve Data)..."
+      : "Mostrando os últimos dados salvos neste navegador.";
+    showAlert("up", "DM INVEST iniciado", msg, 3600);
   }, 600);
 }
 
