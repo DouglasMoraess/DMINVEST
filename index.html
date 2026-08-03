@@ -1386,8 +1386,8 @@ function updateClock() {
    --------------------------------------------------------------- */
 function startAutoVerification() {
   if (autoTimer) clearInterval(autoTimer);
-  // Verificação automática a cada 60 minutos (respeita os limites das APIs gratuitas)
-  autoTimer = setInterval(() => runVerification(true), 60 * 60 * 1000);
+  // Verificação automática a cada 4 horas (dá bastante folga nos limites das APIs grátis)
+  autoTimer = setInterval(() => runVerification(true), 4 * 60 * 60 * 1000);
 }
 function stopAutoVerification() {
   if (autoTimer) clearInterval(autoTimer);
@@ -1434,7 +1434,7 @@ function setupFilters() {
     document.getElementById("autoState").textContent = autoModeOn ? "ligado" : "desligado";
     if (autoModeOn) {
       startAutoVerification();
-      showAlert("side", "Auto-verificação ativada", "Nova checagem a cada 10 segundos.", 3000);
+      showAlert("side", "Auto-verificação ativada", "Nova checagem a cada 4 horas.", 3000);
     } else {
       stopAutoVerification();
       showAlert("side", "Auto-verificação pausada", "Use \"Verificar agora\" para checar manualmente.", 3000);
