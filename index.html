@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DM INVEST — Scanner de Mercado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo-mark">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="32" height="32" rx="8" stroke="url(#g1)" stroke-width="1.5"/>
+        <path d="M7 22L12.5 15L17 19L27 8" stroke="#00ff9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 8H27V14" stroke="#00ff9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs>
+          <linearGradient id="g1" x1="0" y1="0" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#00ff9c"/>
+            <stop offset="1" stop-color="#1c2536"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <span class="logo-title">DM <b>INVEST</b></span>
+      <span class="logo-subtitle">Scanner de Mercado</span>
+    </div>
+  </div>
+
+  <nav class="header-nav">
+    <a href="#dashboard" class="nav-link active" data-view="dashboard">Dashboard</a>
+    <a href="#alertas" class="nav-link" data-view="alertas">Alertas</a>
+    <a href="#ativos" class="nav-link" data-view="ativos">Ativos</a>
+  </nav>
+
+  <div class="header-right">
+    <span class="live-dot"></span>
+    <span class="live-label">Mercado <b id="marketStatus">Aberto</b></span>
+    <span class="clock" id="clock">--:--:--</span>
+  </div>
+</header>
+
+<main class="container">
+
+  <section class="summary-grid">
+    <div class="summary-card trend">
+      <div class="summary-icon">📈</div>
+      <div class="summary-info">
+        <span class="summary-value" id="countTrend">0</span>
+        <span class="summary-label">Em tendência forte</span>
+      </div>
+      <div class="summary-bar"><div class="summary-bar-fill" id="barTrend"></div></div>
+    </div>
+
+    <div class="summary-card pullback">
+      <div class="summary-icon">⚠️</div>
+      <div class="summary-info">
+        <span class="summary-value" id="countPullback">0</span>
+        <span class="summary-label">Em pullback</span>
+      </div>
+      <div class="summary-bar"><div class="summary-bar-fill" id="barPullback"></div></div>
+    </div>
+
+    <div class="summary-card neutral">
+      <div class="summary-icon">❌</div>
+      <div class="summary-info">
+        <span class="summary-value" id="countNeutral">0</span>
+        <span class="summary-label">Sem sinal</span>
+      </div>
+      <div class="summary-bar"><div class="summary-bar-fill" id="barNeutral"></div></div>
+    </div>
+
+    <div class="summary-card last-update">
+      <div class="summary-icon">🕒</div>
+      <div class="summary-info">
+        <span class="summary-value small" id="lastUpdate">agora</span>
+        <span class="summary-label">Última análise</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="toolbar">
+    <div class="filter-group" id="signalFilters">
+      <button class="filter-btn active" data-filter="todos">Todos</button>
+      <button class="filter-btn" data-filter="tendencia">Tendência</button>
+      <button class="filter-btn" data-filter="pullback">Pullback</button>
+    </div>
+
+    <div class="filter-group" id="countryFilters">
+      <button class="filter-btn country active" data-country="todos">🌐 Todos</button>
+      <button class="filter-btn country" data-country="BR">🇧🇷 Brasil</button>
+      <button class="filter-btn country" data-country="US">🇺🇸 EUA</button>
+    </div>
+
+    <div class="tf-group" id="tfFilters">
+      <button class="tf-btn active" data-tf="1D">1D</button>
+      <button class="tf-btn" data-tf="1H">1H</button>
+      <button class="tf-btn" data-tf="15M">15M</button>
+    </div>
+
+    <div class="action-group">
+      <button class="btn btn-primary" id="btnRefresh">
+        <span class="btn-icon">⟳</span> Atualizar análise
+      </button>
+      <button class="btn btn-ghost" id="btnFilterAlerts">
+        <span class="btn-icon">🔔</span> Filtrar alertas
+      </button>
+    </div>
+  </section>
+
+  <section class="table-section">
+    <div class="table-header">
+      <h2>Scanner de Ativos</h2>
+      <span class="table-count" id="tableCount">0 ativos</span>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="asset-table">
+        <thead>
+          <tr>
+            <th>País</th>
+            <th>Ativo</th>
+            <th>Timeframe</th>
+            <th>Preço</th>
+            <th>Variação</th>
+            <th>Status</th>
+            <th>Tipo de Alerta</th>
+          </tr>
+        </thead>
+        <tbody id="assetTableBody">
+          <!-- injected by script.js -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <span class="empty-icon">🔍</span>
+      <p>Nenhum ativo corresponde aos filtros selecionados.</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>DM INVEST © 2026 — Scanner educacional. Não constitui recomendação de investimento.</span>
+  </footer>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
