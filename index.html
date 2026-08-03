@@ -370,17 +370,32 @@
   .stock-change.down { color: var(--red); }
   .stock-change.side { color: var(--orange); }
 
-  .ma-rows { display: flex; flex-direction: column; gap: 7px; }
-  .ma-row {
-    display: flex; align-items: center; justify-content: space-between;
-    font-size: 11.5px; color: var(--text-sub);
+  .tf-rows {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
   }
-  .ma-row b { color: var(--text-main); font-family: var(--font-mono); font-weight: 600; }
-  .ma-track { flex: 1; height: 4px; margin: 0 10px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden; }
-  .ma-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
-  .ma-fill.ma9 { background: #c7cdd6; }
-  .ma-fill.ma20 { background: var(--gray-accent); }
-  .ma-fill.ma200 { background: var(--text-faint); }
+  .tf-chip {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+    text-align: center;
+    padding: 8px 6px;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-soft);
+    font-size: 10.5px;
+  }
+  .tf-chip b { font-size: 11px; color: var(--text-main); letter-spacing: 0.3px; }
+  .tf-chip span { color: var(--text-sub); }
+  .tf-chip.up { background: var(--green-dim); border-color: rgba(0,227,154,0.3); }
+  .tf-chip.up span { color: var(--green); }
+  .tf-chip.down { background: var(--red-dim); border-color: rgba(255,77,94,0.3); }
+  .tf-chip.down span { color: var(--red); }
+  .tf-chip.side { opacity: 0.75; }
+  .tf-chip.tf-confirmed { box-shadow: 0 0 0 1px currentColor inset; }
 
   .stock-verdict {
     margin-top: 14px;
@@ -581,11 +596,12 @@
 <!-- ================= DISCLAIMER ================= -->
 <div class="disclaimer" id="disclaimer">
   <p>
-    <b>Aviso legal:</b> a DM INVEST é uma ferramenta educacional de estudo sobre médias móveis (MM9, MM20, MM200)
-    e indicadores fundamentalistas. Preços, médias e indicadores (P/L, P/VP, ROE, Dividend Yield, margem e
-    dívida/patrimônio) são <b>simulados/ilustrativos</b> e gerados por <b>regras automáticas</b> — não constituem
-    recomendação, análise ou oferta de investimento (Resolução CVM nº 20/2021). Consulte sempre um profissional
-    certificado antes de investir.
+    <b>Aviso legal:</b> a DM INVEST é uma ferramenta educacional de estudo sobre médias móveis (MM9, MM20, MM200).
+    Os preços e médias técnicas podem vir de APIs de terceiros (brapi.dev e Twelve Data) quando configuradas, mas
+    os indicadores fundamentalistas (P/L, P/VP, ROE, Dividend Yield, margem e dívida/patrimônio) são
+    <b>ilustrativos</b>. Em nenhuma hipótese o conteúdo aqui apresentado constitui recomendação, análise ou
+    oferta de investimento (Resolução CVM nº 20/2021). Dados de terceiros podem falhar, atrasar ou conter erros.
+    Consulte sempre um profissional certificado antes de investir.
   </p>
   <button class="disclaimer-close" id="disclaimerClose" aria-label="Fechar aviso">✕</button>
 </div>
@@ -723,11 +739,11 @@ const ASSETS = [
   { symbol: "GOOGL", name: "Alphabet Inc.",      country: "US", base: 176.30 },
 ].map((a) => ({
   ...a,
-  phase: Math.random() * Math.PI * 2,      // fase inicial aleatória do ciclo
-  speed: 0.10 + Math.random() * 0.12,      // velocidade do ciclo (varia por ativo)
-  status: "side",                          // estado anterior (para detectar mudanças)
-  lastPrice: a.base,
-  fund: FUNDAMENTALS[a.symbol],            // dados fundamentalistas ilustrativos
+  status: "side",       // estado anterior (para detectar mudanças)
+  lastPrice: a.base,    // atualizado após a 1ª busca real
+  confluence: false,
+  setup: null,
+  fund: FUNDAMENTALS[a.symbol],  // dados fundamentalistas ilustrativos
 }));
 
 const FLAGS = { BR: "🇧🇷", US: "🇺🇸" };
@@ -836,38 +852,209 @@ function simplifyFundamentals(f) {
 }
 
 /* ---------------------------------------------------------------
-   2) FUNÇÃO PRINCIPAL — VERIFICA ALINHAMENTO DAS MÉDIAS MÓVEIS
-   Regras:
-     preço > MM9 > MM20 > MM200  -> "up"   (tendência de ALTA)
-     preço < MM9 < MM20 < MM200  -> "down" (tendência de BAIXA)
-     qualquer outro caso         -> "side" (mercado LATERAL)
-   --------------------------------------------------------------- */
-function checkMovingAverageAlignment(price, ma9, ma20, ma200) {
-  const bullish = price > ma9 && ma9 > ma20 && ma20 > ma200;
-  const bearish = price < ma9 && ma9 < ma20 && ma20 < ma200;
+   2) MOTOR DE CONFLUÊNCIA MULTI-TIMEFRAME (15M / 1H / Diário)
+   Regra (conforme especificação):
 
-  if (bullish) return "up";
-  if (bearish) return "down";
-  return "side";
+   - Nos gráficos de 15M e 1H, as EMAs de 9 e 20 precisam estar
+     "a favor da tendência do preço":
+       ALTA  -> preço > EMA9 > EMA20
+       BAIXA -> preço < EMA9 < EMA20
+
+   - As médias de 200 períodos (SMA200 e EMA200) precisam estar
+     DISTANTES do preço (na mesma direção da tendência), o que
+     indica que o preço está esticado e pode haver retorno à
+     média de 200 — por isso vale observar essa região.
+
+   - Se o MESMO alinhamento (EMA9/EMA20 a favor da tendência)
+     também aparecer no gráfico DIÁRIO, isso reforça a
+     possibilidade de continuação da tendência (confluência).
+   --------------------------------------------------------------- */
+
+const FAR_FROM_200_THRESHOLD = 0.03; // 3% — distância mínima para considerar "esticado"
+
+/* =================================================================
+   CONFIGURAÇÃO DE DADOS REAIS — cole suas chaves gratuitas aqui.
+
+   BRAPI_TOKEN     -> conta grátis em https://brapi.dev  (ações B3: PETR4, VALE3...)
+   TWELVE_DATA_KEY -> conta grátis em https://twelvedata.com (ações EUA: AAPL, MSFT...)
+
+   Sem as chaves preenchidas, as chamadas vão falhar e os cards mostrarão
+   "dados indisponíveis" em vez de travar o site.
+   ================================================================= */
+const BRAPI_TOKEN = "7mrgApjEe2EcfrB8Udqiuf";
+const TWELVE_DATA_KEY = "ca307692db5b4bc3905a209a7e163a0d";
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /* ---------------------------------------------------------------
-   3) GERADOR DE DADOS MOCK (preço + MM9 + MM20 + MM200)
-   Usa uma onda senoidal por ativo para simular ciclos realistas
-   de alta / baixa / lateralização, com um pouco de ruído.
+   BUSCA DE HISTÓRICO — Brasil (brapi.dev)
    --------------------------------------------------------------- */
-function generateMockPoint(asset) {
-  asset.phase += asset.speed;
+async function fetchClosesBR(symbol, tf) {
+  const intervalMap = { "15M": "15m", "60M": "60m", D: "1d" };
+  const rangeMap = { "15M": "3mo", "60M": "3mo", D: "2y" };
 
-  const wave = Math.sin(asset.phase);       // oscila entre -1 e 1
-  const noise = (Math.random() - 0.5) * 0.006;
+  const url = `https://brapi.dev/api/v2/stocks/historical?symbols=${symbol}&range=${rangeMap[tf]}&interval=${intervalMap[tf]}`;
+  const headers = BRAPI_TOKEN && !BRAPI_TOKEN.startsWith("COLE_") ? { Authorization: `Bearer ${BRAPI_TOKEN}` } : {};
 
-  const ma200 = asset.base * (1 + noise * 0.3);
-  const ma20 = asset.base * (1 + wave * 0.022 + noise * 0.5);
-  const ma9 = asset.base * (1 + wave * 0.038 + noise);
-  const price = asset.base * (1 + wave * 0.055 + noise * 1.4);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(`brapi HTTP ${res.status}`);
+  const json = await res.json();
+  const bars = json?.results?.[0]?.data?.historicalDataPrice;
+  if (!bars || !bars.length) throw new Error("brapi: sem histórico retornado");
 
-  return { price, ma9, ma20, ma200 };
+  return bars.map((b) => Number(b.close)).filter((c) => Number.isFinite(c));
+}
+
+/* ---------------------------------------------------------------
+   BUSCA DE HISTÓRICO — EUA (Twelve Data), em LOTE por timeframe
+   (uma única chamada para todos os símbolos americanos de uma vez,
+   pra economizar créditos e respeitar o limite de 8/min do plano grátis)
+   --------------------------------------------------------------- */
+async function fetchClosesUSBatch(symbols, tf) {
+  const intervalMap = { "15M": "15min", "60M": "1h", D: "1day" };
+  const url = `https://api.twelvedata.com/time_series?symbol=${symbols.join(",")}&interval=${intervalMap[tf]}&outputsize=210&apikey=${TWELVE_DATA_KEY}`;
+
+  const res = await fetch(url);
+  const json = await res.json();
+  const out = {};
+
+  if (json.values) {
+    // resposta de símbolo único (não deveria ocorrer com lista, mas por segurança)
+    out[symbols[0]] = json.values.map((v) => Number(v.close)).reverse();
+  } else {
+    symbols.forEach((sym) => {
+      const entry = json[sym];
+      out[sym] = entry && entry.values ? entry.values.map((v) => Number(v.close)).reverse() : null;
+    });
+  }
+  return out;
+}
+
+/* ---------------------------------------------------------------
+   ORQUESTRA A BUSCA COMPLETA (todos os ativos, 3 timeframes)
+   --------------------------------------------------------------- */
+async function fetchAllMarketData() {
+  const closesMap = {};
+  const brAssets = ASSETS.filter((a) => a.country === "BR");
+  const usSymbols = ASSETS.filter((a) => a.country === "US").map((a) => a.symbol);
+
+  // EUA em lote — 3 chamadas no total (uma por timeframe)
+  for (const tf of ["15M", "60M", "D"]) {
+    try {
+      const batch = await fetchClosesUSBatch(usSymbols, tf);
+      usSymbols.forEach((sym) => {
+        closesMap[sym] = closesMap[sym] || {};
+        closesMap[sym][tf] = batch[sym];
+      });
+    } catch (err) {
+      console.error("Erro Twelve Data", tf, err);
+    }
+    await sleep(1200); // respeita o limite de créditos/minuto do plano grátis
+  }
+
+  // Brasil — um ativo por vez (brapi.dev)
+  for (const asset of brAssets) {
+    closesMap[asset.symbol] = closesMap[asset.symbol] || {};
+    for (const tf of ["15M", "60M", "D"]) {
+      try {
+        closesMap[asset.symbol][tf] = await fetchClosesBR(asset.symbol, tf);
+      } catch (err) {
+        console.error("Erro brapi.dev", asset.symbol, tf, err);
+        closesMap[asset.symbol][tf] = null;
+      }
+      await sleep(250);
+    }
+  }
+
+  return closesMap;
+}
+
+/* ---------------------------------------------------------------
+   CÁLCULO DE EMA/SMA A PARTIR DO HISTÓRICO REAL
+   --------------------------------------------------------------- */
+function emaLast(closes, period) {
+  if (!closes || closes.length < period) return null;
+  const k = 2 / (period + 1);
+  let ema = closes.slice(0, period).reduce((a, b) => a + b, 0) / period; // seed = SMA
+  for (let i = period; i < closes.length; i++) ema = closes[i] * k + ema * (1 - k);
+  return ema;
+}
+
+function smaLast(closes, period) {
+  if (!closes || closes.length < period) return null;
+  const slice = closes.slice(closes.length - period);
+  return slice.reduce((a, b) => a + b, 0) / period;
+}
+
+/* ---------------------------------------------------------------
+   MONTA O "SNAPSHOT" DE UM TIMEFRAME A PARTIR DOS FECHAMENTOS REAIS
+   (mesma estrutura e mesmas regras de antes — só a origem do dado mudou)
+   --------------------------------------------------------------- */
+function computeSnapshotFromCloses(closes, tf) {
+  if (!closes || closes.length < 21) return { tf, direction: null, insufficientData: true };
+
+  const price = closes[closes.length - 1];
+  const ema9 = emaLast(closes, 9);
+  const ema20 = emaLast(closes, 20);
+
+  const direction =
+    price > ema9 && ema9 > ema20 ? "up" :
+    price < ema9 && ema9 < ema20 ? "down" : null;
+
+  const snapshot = { tf, price, ema9, ema20, direction };
+
+  if (tf !== "D") {
+    if (closes.length < 200) return { ...snapshot, insufficientData: true };
+
+    const sma200 = smaLast(closes, 200);
+    const ema200 = emaLast(closes, 200);
+    const distSma = Math.abs(price - sma200) / sma200;
+    const distEma = Math.abs(price - ema200) / ema200;
+    const distPct = (distSma + distEma) / 2;
+
+    const favor200 =
+      direction === "up" ? price > sma200 && price > ema200 :
+      direction === "down" ? price < sma200 && price < ema200 : false;
+
+    const distant = distPct > FAR_FROM_200_THRESHOLD;
+
+    Object.assign(snapshot, { sma200, ema200, distPct, favor200, distant });
+  }
+
+  return snapshot;
+}
+
+/* ---------------------------------------------------------------
+   2) CLASSIFICA O ATIVO A PARTIR DOS 3 SNAPSHOTS (15M, 1H, Diário)
+   Regras:
+     CASO 1 — RETORNO À MÉDIA: EMA9/EMA20 a favor do preço, mas a MM200
+       (aritmética e exponencial) está DISTANTE -> vale verificar o ativo.
+     CASO 2 — CONTINUAÇÃO: EMA9, EMA20 e MM200 alinhadas a favor do
+       preço e PRÓXIMAS -> tendência saudável.
+     Em ambos: se o DIÁRIO também estiver a favor -> tendência forte;
+       se estiver contra -> divergência, apenas observar.
+   --------------------------------------------------------------- */
+function classifyFromSnapshots(tf15, tf60, tfD) {
+  const dataOK = tf15 && tf60 && !tf15.insufficientData && !tf60.insufficientData;
+
+  const isPullback = (tf) => tf.direction !== null && tf.favor200 && tf.distant;
+  const isContinuation = (tf) => tf.direction !== null && tf.favor200 && !tf.distant;
+
+  const primaryPullback = dataOK && isPullback(tf15) && isPullback(tf60) && tf15.direction === tf60.direction;
+  const primaryContinuation = dataOK && isContinuation(tf15) && isContinuation(tf60) && tf15.direction === tf60.direction;
+
+  const setupType = primaryPullback ? "pullback" : primaryContinuation ? "continuation" : null;
+  const primaryDirection = setupType ? tf15.direction : null;
+
+  // Diário: agora é um dado 100% real — o preço/ EMA9/20 vieram da API
+  const dailyFavor = !!(setupType && tfD && tfD.direction === primaryDirection);
+
+  const avgDistPct = setupType === "pullback" ? (tf15.distPct + tf60.distPct) / 2 : 0;
+  const price = tf15?.price ?? tf60?.price ?? tfD?.price ?? null;
+
+  return { price, tf15, tf60, tfD, setupType, primaryDirection, dailyFavor, avgDistPct, dataOK };
 }
 
 /* ---------------------------------------------------------------
@@ -906,22 +1093,42 @@ function formatPrice(country, value) {
   return `${CURRENCY[country]} ${value.toFixed(2)}`;
 }
 
-function statusLabel(status) {
-  if (status === "up") return "Tendência de Alta";
-  if (status === "down") return "Tendência de Baixa";
-  return "Lateral";
+function statusLabel(setupType, dailyFavor) {
+  if (!setupType) return "Sem Confluência";
+  if (dailyFavor) {
+    return setupType === "pullback" ? "Tendência Forte (Retorno à Média)" : "Tendência Forte (Continuação)";
+  }
+  return setupType === "pullback"
+    ? "Observar — Retorno à Média (Diário Diverge)"
+    : "Continuação, mas Diário Diverge";
 }
 
-function verdictText(status, ma9, ma20, ma200) {
-  if (status === "up") return `Preço &gt; <b>MM9</b> &gt; <b>MM20</b> &gt; <b>MM200</b> — alinhamento de alta confirmado.`;
-  if (status === "down") return `Preço &lt; <b>MM9</b> &lt; <b>MM20</b> &lt; <b>MM200</b> — alinhamento de baixa confirmado.`;
-  return `Sem alinhamento consistente entre <b>MM9</b>, <b>MM20</b> e <b>MM200</b>.`;
+function tfChipLabel(snapshot) {
+  if (snapshot.direction === "up") return { text: "a favor da alta", tone: "up" };
+  if (snapshot.direction === "down") return { text: "a favor da baixa", tone: "down" };
+  return { text: "sem favor", tone: "side" };
 }
 
-function maBarWidth(value, allValues) {
-  const max = Math.max(...allValues) * 1.02;
-  const min = Math.min(...allValues) * 0.98;
-  return Math.max(6, Math.min(100, ((value - min) / (max - min)) * 100));
+function buildVerdict(data, dirLabel) {
+  if (!data.setupType) {
+    return `Sem alinhamento simultâneo de EMA9/EMA20 nos gráficos de 15M e 1H no momento — nenhum setup técnico detectado agora.`;
+  }
+
+  let text;
+  if (data.setupType === "pullback") {
+    text = `Nos gráficos de 15M e 1H, as EMAs de 9 e 20 estão a favor da tendência de ${dirLabel}, `
+      + `mas as médias de 200 (aritmética e exponencial) estão distantes do preço (~${(data.avgDistPct * 100).toFixed(1)}%) — `
+      + `vale verificar o ativo, pois pode haver oportunidade de retorno à média.`;
+  } else {
+    text = `Nos gráficos de 15M e 1H, as médias de 9, 20 e 200 (aritmética e exponencial) estão todas `
+      + `alinhadas a favor da tendência de ${dirLabel}, o que indica continuação da tendência.`;
+  }
+
+  text += data.dailyFavor
+    ? ` No gráfico diário as médias também estão a favor do preço — isso indica uma tendência forte.`
+    : ` No gráfico diário as médias estão contra — considere isso uma divergência e apenas observe o comportamento do ativo.`;
+
+  return text;
 }
 
 function passesFilters(asset) {
@@ -946,8 +1153,43 @@ function renderCards() {
   }
 
   visible.forEach((asset) => {
-    const { price, ma9, ma20, ma200, changePct, status } = asset;
-    const barValues = [ma9, ma20, ma200];
+    if (!asset.setup) {
+      const card = document.createElement("div");
+      card.className = "stock-card side";
+      card.innerHTML = `
+        <div class="stock-top">
+          <div class="stock-id">
+            <span class="stock-flag">${FLAGS[asset.country]}</span>
+            <span>
+              <span class="stock-symbol">${asset.symbol}</span>
+              <span class="stock-name">${asset.name}</span>
+            </span>
+          </div>
+          <span class="stock-badge side">⏳ Dados Indisponíveis</span>
+        </div>
+        <div class="stock-verdict">
+          Não foi possível buscar dados reais para este ativo ainda. Verifique sua chave de API
+          (brapi.dev / Twelve Data) e sua conexão, ou clique em "Verificar agora".
+        </div>
+      `;
+      grid.appendChild(card);
+      return;
+    }
+
+    const { price, changePct, status, confluence, setup } = asset;
+    const dirLabel = status === "up" ? "alta" : status === "down" ? "baixa" : "-";
+    const setupType = setup.setupType;
+    const dailyFavor = setup.dailyFavor;
+
+    // O selo principal reflete a CONFIANÇA do sinal: só fica "forte" (cor cheia)
+    // quando o diário também confirma. Sem confirmação diária, vira alerta
+    // de observação (laranja), mesmo que a direção técnica seja clara.
+    const badgeTone = !setupType ? "side" : dailyFavor ? status : "side";
+    const badgeIcon = !setupType ? "➖" : dailyFavor ? (status === "up" ? "📈" : "📉") : "⚠️";
+
+    const tf15chip = tfChipLabel(setup.tf15);
+    const tf60chip = tfChipLabel(setup.tf60);
+    const tfDchip  = tfChipLabel(setup.tfD);
 
     const card = document.createElement("div");
     card.className = `stock-card ${status}`;
@@ -960,7 +1202,7 @@ function renderCards() {
             <span class="stock-name">${asset.name}</span>
           </span>
         </div>
-        <span class="stock-badge ${status}">${status === "up" ? "📈" : status === "down" ? "📉" : "➖"} ${statusLabel(status)}</span>
+        <span class="stock-badge ${badgeTone}">${badgeIcon} ${statusLabel(setupType, dailyFavor)}</span>
       </div>
 
       <div class="stock-price-row">
@@ -968,25 +1210,13 @@ function renderCards() {
         <span class="stock-change ${status}">${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%</span>
       </div>
 
-      <div class="ma-rows">
-        <div class="ma-row">
-          <span>MM9</span>
-          <div class="ma-track"><div class="ma-fill ma9" style="width:${maBarWidth(ma9, barValues)}%"></div></div>
-          <b>${formatPrice(asset.country, ma9)}</b>
-        </div>
-        <div class="ma-row">
-          <span>MM20</span>
-          <div class="ma-track"><div class="ma-fill ma20" style="width:${maBarWidth(ma20, barValues)}%"></div></div>
-          <b>${formatPrice(asset.country, ma20)}</b>
-        </div>
-        <div class="ma-row">
-          <span>MM200</span>
-          <div class="ma-track"><div class="ma-fill ma200" style="width:${maBarWidth(ma200, barValues)}%"></div></div>
-          <b>${formatPrice(asset.country, ma200)}</b>
-        </div>
+      <div class="tf-rows">
+        <div class="tf-chip ${tf15chip.tone}"><b>15M</b><span>${tf15chip.text}</span></div>
+        <div class="tf-chip ${tf60chip.tone}"><b>1H</b><span>${tf60chip.text}</span></div>
+        <div class="tf-chip ${tfDchip.tone} ${confluence ? "tf-confirmed" : ""}"><b>Diário</b><span>${tfDchip.text}</span></div>
       </div>
 
-      <div class="stock-verdict">${verdictText(status, ma9, ma20, ma200)}</div>
+      <div class="stock-verdict">${buildVerdict(setup, dirLabel)}</div>
 
       ${renderFundamentalsBlock(asset)}
     `;
@@ -1041,32 +1271,64 @@ function renderSummary() {
    Dispara alertas inteligentes apenas quando o status MUDA,
    evitando poluir a tela com notificações repetidas.
    --------------------------------------------------------------- */
-function runVerification(showToasts = true) {
+async function runVerification(showToasts = true) {
+  let closesMap;
+  try {
+    closesMap = await fetchAllMarketData();
+  } catch (err) {
+    console.error("Falha geral ao buscar dados de mercado:", err);
+    showAlert("side", "Erro ao buscar dados", "Verifique sua conexão e as chaves de API configuradas.", 6000);
+    return;
+  }
+
   ASSETS.forEach((asset) => {
-    const { price, ma9, ma20, ma200 } = generateMockPoint(asset);
-    const newStatus = checkMovingAverageAlignment(price, ma9, ma20, ma200);
-    const changePct = ((price - asset.lastPrice) / asset.lastPrice) * 100;
+    const c = closesMap[asset.symbol] || {};
+    const tf15 = computeSnapshotFromCloses(c["15M"], "15M");
+    const tf60 = computeSnapshotFromCloses(c["60M"], "60M");
+    const tfD  = computeSnapshotFromCloses(c["D"], "D");
+    const data = classifyFromSnapshots(tf15, tf60, tfD);
+
+    if (data.price == null) {
+      // Sem dado real disponível (API falhou/chave ausente) — mantém último estado conhecido
+      asset.dataError = true;
+      return;
+    }
+    asset.dataError = false;
+
+    const newStatus = data.primaryDirection || "side";
+    const newConfluence = !!data.dailyFavor;
+    const changePct = ((data.price - asset.lastPrice) / asset.lastPrice) * 100;
 
     const statusChanged = newStatus !== asset.status;
+    const confluenceGained = newConfluence && !asset.confluence;
+    const confluenceLost = !newConfluence && asset.confluence && data.setupType;
 
-    asset.price = price;
-    asset.ma9 = ma9;
-    asset.ma20 = ma20;
-    asset.ma200 = ma200;
+    asset.price = data.price;
     asset.changePct = changePct;
-    asset.lastPrice = price;
+    asset.lastPrice = data.price;
+    asset.setup = data;
 
-    if (statusChanged && showToasts) {
-      if (newStatus === "up") {
-        showAlert("up", `${asset.symbol} em ALTA`, "Preço rompeu acima de MM9 › MM20 › MM200.");
-      } else if (newStatus === "down") {
-        showAlert("down", `${asset.symbol} em BAIXA`, "Preço rompeu abaixo de MM9 › MM20 › MM200.");
-      } else {
-        showAlert("side", `${asset.symbol} lateralizou`, "Médias móveis perderam o alinhamento anterior.");
+    if (showToasts) {
+      if (statusChanged && newStatus !== "side") {
+        const dirLabel = newStatus === "up" ? "ALTA" : "BAIXA";
+        if (data.setupType === "pullback") {
+          showAlert(newStatus, `${asset.symbol}: possível retorno à média (${dirLabel})`,
+            "EMA9/EMA20 a favor, mas distante da MM200 — vale verificar o ativo.");
+        } else {
+          showAlert(newStatus, `${asset.symbol}: continuação de tendência (${dirLabel})`,
+            "EMA9, EMA20 e MM200 alinhadas a favor do preço.");
+        }
+      } else if (statusChanged && newStatus === "side") {
+        showAlert("side", `${asset.symbol} perdeu o setup`, "15M e 1H deixaram de estar alinhados.");
+      } else if (confluenceGained) {
+        showAlert(newStatus, `${asset.symbol}: diário confirma`, "Médias do diário também a favor — tendência forte.");
+      } else if (confluenceLost) {
+        showAlert("side", `${asset.symbol}: diário diverge`, "Médias do diário contra — apenas observar o ativo.");
       }
     }
 
     asset.status = newStatus;
+    asset.confluence = newConfluence;
   });
 
   renderSummary();
@@ -1091,7 +1353,8 @@ function updateClock() {
    --------------------------------------------------------------- */
 function startAutoVerification() {
   if (autoTimer) clearInterval(autoTimer);
-  autoTimer = setInterval(() => runVerification(true), 10000);
+  // Verificação automática a cada 60 minutos (respeita os limites das APIs gratuitas)
+  autoTimer = setInterval(() => runVerification(true), 60 * 60 * 1000);
 }
 function stopAutoVerification() {
   if (autoTimer) clearInterval(autoTimer);
@@ -1121,15 +1384,16 @@ function setupFilters() {
     });
   });
 
-  document.getElementById("btnVerify").addEventListener("click", (e) => {
+  document.getElementById("btnVerify").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
     btn.classList.add("busy");
     btn.disabled = true;
-    setTimeout(() => {
-      runVerification(true);
+    try {
+      await runVerification(true);
+    } finally {
       btn.classList.remove("busy");
       btn.disabled = false;
-    }, 450);
+    }
   });
 
   document.getElementById("btnAuto").addEventListener("click", (e) => {
@@ -1209,13 +1473,16 @@ function init() {
   setupDisclaimer();
   setupScrollReveal();
 
-  runVerification(false);   // primeira checagem, sem disparar toasts
+  renderSummary();
+  renderCards(); // mostra os cards em estado "dados indisponíveis" enquanto a 1ª busca real roda
+
+  runVerification(false).catch((err) => console.error("Erro na verificação inicial:", err));
   updateClock();
   setInterval(updateClock, 1000);
   startAutoVerification();
 
   setTimeout(() => {
-    showAlert("up", "Scanner iniciado", "Monitorando MM9 · MM20 · MM200 em tempo simulado.", 3600);
+    showAlert("up", "Scanner iniciado", "Buscando dados reais (brapi.dev / Twelve Data)...", 3600);
   }, 600);
 }
 
