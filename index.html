@@ -13,12 +13,12 @@
      DM INVEST — DESIGN TOKENS
      ========================================================= */
   :root {
-    --bg-void: #05070c;
-    --bg-main: #090d15;
-    --bg-card: #11161f;
-    --bg-card-hover: #161d29;
-    --border-soft: #1e2634;
-    --border-glow: rgba(59, 130, 246, 0.25);
+    --bg-void: #0b0b0d;
+    --bg-main: #121214;
+    --bg-card: #18181b;
+    --bg-card-hover: #1f1f23;
+    --border-soft: #29292e;
+    --border-glow: rgba(255, 255, 255, 0.10);
 
     --green: #00e39a;
     --green-dim: rgba(0, 227, 154, 0.12);
@@ -26,8 +26,8 @@
     --red-dim: rgba(255, 77, 94, 0.12);
     --orange: #ffa53d;
     --orange-dim: rgba(255, 165, 61, 0.12);
-    --blue: #3b82f6;
-    --blue-dim: rgba(59, 130, 246, 0.12);
+    --gray-accent: #9aa2af;
+    --gray-accent-dim: rgba(154, 162, 175, 0.12);
 
     --text-main: #eef1f7;
     --text-sub: #8b93a7;
@@ -69,8 +69,8 @@
     position: absolute;
     inset: 0;
     background-image:
-      linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
     background-size: 46px 46px;
     mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, black 20%, transparent 70%);
   }
@@ -82,7 +82,7 @@
     transform: translateX(-50%);
     width: 900px;
     height: 500px;
-    background: radial-gradient(circle, rgba(0, 227, 154, 0.10), transparent 70%);
+    background: radial-gradient(circle, rgba(0, 227, 154, 0.06), transparent 70%);
     filter: blur(10px);
   }
 
@@ -257,7 +257,7 @@
   .summary-card.up .summary-value { color: var(--green); }
   .summary-card.down .summary-value { color: var(--red); }
   .summary-card.side .summary-value { color: var(--orange); }
-  .summary-card.total .summary-value { color: var(--blue); }
+  .summary-card.total .summary-value { color: var(--gray-accent); }
 
   /* =========================================================
      TOOLBAR
@@ -288,7 +288,7 @@
   }
   .chip:hover { color: var(--text-main); border-color: rgba(255,255,255,0.25); transform: translateY(-1px); }
   .chip.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
-  .chip.active.country-chip { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+  .chip.active.country-chip { background: var(--gray-accent-dim); border-color: var(--gray-accent); color: var(--gray-accent); }
 
   .actions { display: flex; gap: 10px; margin-left: auto; }
   .btn {
@@ -378,8 +378,8 @@
   .ma-row b { color: var(--text-main); font-family: var(--font-mono); font-weight: 600; }
   .ma-track { flex: 1; height: 4px; margin: 0 10px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden; }
   .ma-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
-  .ma-fill.ma9 { background: var(--blue); }
-  .ma-fill.ma20 { background: #a78bfa; }
+  .ma-fill.ma9 { background: #c7cdd6; }
+  .ma-fill.ma20 { background: var(--gray-accent); }
   .ma-fill.ma200 { background: var(--text-faint); }
 
   .stock-verdict {
