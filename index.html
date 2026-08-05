@@ -475,6 +475,68 @@
   .empty-state span { font-size: 34px; display: block; margin-bottom: 12px; }
 
   /* =========================================================
+     SWING TRADE SCREENER (EUA)
+     ========================================================= */
+  .swing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+    margin-bottom: 46px;
+  }
+
+  .swing-card {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.35s cubic-bezier(.22,1,.36,1), box-shadow 0.35s ease, border-color 0.35s ease;
+  }
+  .swing-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lift); border-color: rgba(255,255,255,0.16); }
+  .swing-card.swing-top { border-color: rgba(0,227,154,0.4); box-shadow: 0 0 0 1px rgba(0,227,154,0.25), var(--shadow-soft); }
+
+  .swing-rank {
+    position: absolute;
+    top: -10px; left: 20px;
+    background: var(--green);
+    color: #04140d;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  .swing-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .swing-symbol { font-size: 16px; font-weight: 800; display: block; }
+  .swing-name { font-size: 11.5px; color: var(--text-sub); }
+
+  .swing-setup-badge {
+    font-size: 11px; font-weight: 700; padding: 5px 11px; border-radius: 999px; white-space: nowrap;
+  }
+  .swing-setup-badge.pullback { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,227,154,0.35); }
+  .swing-setup-badge.breakout { background: var(--gray-accent-dim); color: var(--gray-accent); border: 1px solid rgba(154,162,175,0.35); }
+
+  .swing-meta {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--text-sub);
+    padding-bottom: 12px; margin-bottom: 12px;
+    border-bottom: 1px dashed var(--border-soft);
+  }
+  .swing-meta b { color: var(--text-main); }
+
+  .swing-row { margin-bottom: 8px; font-size: 12px; }
+  .swing-row span { color: var(--text-sub); font-weight: 700; display: block; margin-bottom: 2px; }
+  .swing-row p { color: var(--text-main); line-height: 1.5; }
+
+  .swing-obs {
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 11.5px; color: var(--text-sub); line-height: 1.5;
+  }
+
+  /* =========================================================
      TOAST / ALERTAS INTELIGENTES
      ========================================================= */
   #alertContainer {
@@ -662,6 +724,20 @@
     </div>
   </section>
 
+  <!-- ================= SWING TRADE SCREENER (EUA) ================= -->
+  <section class="reveal" id="swingSection">
+    <div class="section-heading">
+      <h2>🇺🇸 Swing Trade — Setups (EUA)</h2>
+      <span>Pullback e Rompimento · MM9 / MM20 / MM200 · 60min + Diário</span>
+    </div>
+    <div class="swing-grid" id="swingGrid">
+      <div class="empty-state">
+        <span>🔍</span>
+        <p>Clique em "Verificar agora" para gerar os setups de swing trade.</p>
+      </div>
+    </div>
+  </section>
+
   <footer class="footer">
     <p><b>DM INVEST</b> © 2026 — Plataforma de estudo e simulação de estratégias com médias móveis.</p>
     <p>
@@ -703,6 +779,9 @@ const FUNDAMENTALS = {
   MSFT:  { pl: 34.7, pvp: 11.8,roe: 34.5, dy: 0.8,  margem: 35.6, divPatrim: 0.42 },
   NVDA:  { pl: 46.3, pvp: 34.1,roe: 91.2, dy: 0.03, margem: 48.9, divPatrim: 0.24 },
   GOOGL: { pl: 24.8, pvp: 6.4, roe: 27.1, dy: 0.4,  margem: 27.8, divPatrim: 0.08 },
+  AMZN:  { pl: 38.5, pvp: 7.2, roe: 20.1, dy: 0.0,  margem: 8.9,  divPatrim: 0.45 },
+  META:  { pl: 24.6, pvp: 8.1, roe: 32.4, dy: 0.3,  margem: 34.2, divPatrim: 0.15 },
+  JPM:   { pl: 12.8, pvp: 2.1, roe: 17.5, dy: 2.4,  margem: 33.6, divPatrim: 1.35 },
 };
 
 /* ---------------------------------------------------------------
@@ -717,11 +796,14 @@ const ASSETS = [
   { symbol: "BBAS3", name: "Banco do Brasil ON", country: "BR", base: 27.05 },
   { symbol: "WEGE3", name: "WEG ON",             country: "BR", base: 40.61 },
   { symbol: "MGLU3", name: "Magazine Luiza ON",  country: "BR", base: 2.14  },
-  { symbol: "AAPL",  name: "Apple Inc.",         country: "US", base: 196.50 },
-  { symbol: "TSLA",  name: "Tesla Inc.",         country: "US", base: 251.90 },
-  { symbol: "MSFT",  name: "Microsoft Corp.",    country: "US", base: 431.20 },
-  { symbol: "NVDA",  name: "NVIDIA Corp.",       country: "US", base: 138.75 },
-  { symbol: "GOOGL", name: "Alphabet Inc.",      country: "US", base: 176.30 },
+  { symbol: "AAPL",  name: "Apple Inc.",         country: "US", base: 196.50, sector: "Tecnologia" },
+  { symbol: "TSLA",  name: "Tesla Inc.",         country: "US", base: 251.90, sector: "Consumo / Industrial" },
+  { symbol: "MSFT",  name: "Microsoft Corp.",    country: "US", base: 431.20, sector: "Tecnologia" },
+  { symbol: "NVDA",  name: "NVIDIA Corp.",       country: "US", base: 138.75, sector: "Tecnologia" },
+  { symbol: "GOOGL", name: "Alphabet Inc.",      country: "US", base: 176.30, sector: "Tecnologia" },
+  { symbol: "AMZN",  name: "Amazon.com Inc.",    country: "US", base: 225.00, sector: "Consumo / Tecnologia" },
+  { symbol: "META",  name: "Meta Platforms",     country: "US", base: 640.00, sector: "Tecnologia" },
+  { symbol: "JPM",   name: "JPMorgan Chase",     country: "US", base: 265.00, sector: "Financeiro" },
 ].map((a) => ({
   ...a,
   status: "side",       // estado anterior (para detectar mudanças)
@@ -735,6 +817,7 @@ const FLAGS = { BR: "🇧🇷", US: "🇺🇸" };
 const CURRENCY = { BR: "R$", US: "$" };
 
 let activeSignalFilter = "todos";
+let swingResultsCache = [];
 let activeCountry = "todos";
 
 /* ---------------------------------------------------------------
@@ -900,7 +983,7 @@ async function fetchClosesBR(symbol, tf) {
    (uma única chamada para todos os símbolos americanos de uma vez,
    pra economizar créditos e respeitar o limite de 8/min do plano grátis)
    --------------------------------------------------------------- */
-async function fetchClosesUSBatch(symbols, tf) {
+async function fetchBarsUSBatch(symbols, tf) {
   const intervalMap = { "15M": "15min", "60M": "1h", D: "1day" };
   const url = `https://api.twelvedata.com/time_series?symbol=${symbols.join(",")}&interval=${intervalMap[tf]}&outputsize=210&apikey=${TWELVE_DATA_KEY}`;
 
@@ -908,13 +991,25 @@ async function fetchClosesUSBatch(symbols, tf) {
   const json = await res.json();
   const out = {};
 
+  const parseBars = (values) =>
+    values
+      .map((v) => ({
+        date: v.datetime,
+        open: Number(v.open),
+        high: Number(v.high),
+        low: Number(v.low),
+        close: Number(v.close),
+        volume: Number(v.volume),
+      }))
+      .reverse(); // API retorna mais recente primeiro — deixamos em ordem cronológica
+
   if (json.values) {
     // resposta de símbolo único (não deveria ocorrer com lista, mas por segurança)
-    out[symbols[0]] = json.values.map((v) => Number(v.close)).reverse();
+    out[symbols[0]] = parseBars(json.values);
   } else {
     symbols.forEach((sym) => {
       const entry = json[sym];
-      out[sym] = entry && entry.values ? entry.values.map((v) => Number(v.close)).reverse() : null;
+      out[sym] = entry && entry.values ? parseBars(entry.values) : null;
     });
   }
   return out;
@@ -959,6 +1054,7 @@ async function fetchLivePriceBR(symbols) {
 async function fetchAllMarketData() {
   const closesMap = {};
   const priceMap = {};
+  const barsUSMap = {}; // guarda os candles completos (OHLCV) das americanas p/ o Swing Trade Screener
   const brAssets = ASSETS.filter((a) => a.country === "BR");
   const usSymbols = ASSETS.filter((a) => a.country === "US").map((a) => a.symbol);
   const brSymbols = brAssets.map((a) => a.symbol);
@@ -972,7 +1068,7 @@ async function fetchAllMarketData() {
   await sleep(300);
 
   // HISTÓRICO — EUA em lote — 3 chamadas no total (uma por timeframe).
-  // Cada chamada consome 5 créditos (5 símbolos). O plano grátis da
+  // Cada chamada consome 8 créditos (8 símbolos — no limite seguro). O plano grátis da
   // Twelve Data permite só 8 créditos por MINUTO (não por segundo!),
   // então cada chamada precisa cair em um minuto-calendário diferente
   // da anterior — por isso a espera de ~65s entre elas.
@@ -981,10 +1077,13 @@ async function fetchAllMarketData() {
   // precisar de uma chamada extra de cotação.)
   for (const tf of ["15M", "60M", "D"]) {
     try {
-      const batch = await fetchClosesUSBatch(usSymbols, tf);
+      const batch = await fetchBarsUSBatch(usSymbols, tf);
       usSymbols.forEach((sym) => {
         closesMap[sym] = closesMap[sym] || {};
-        closesMap[sym][tf] = batch[sym];
+        barsUSMap[sym] = barsUSMap[sym] || {};
+        const bars = batch[sym];
+        closesMap[sym][tf] = bars ? bars.map((b) => b.close) : null;
+        barsUSMap[sym][tf] = bars || null;
       });
       if (tf === "15M") {
         usSymbols.forEach((sym) => {
@@ -1012,7 +1111,7 @@ async function fetchAllMarketData() {
     }
   }
 
-  return { closesMap, priceMap };
+  return { closesMap, priceMap, barsUSMap };
 }
 
 /* ---------------------------------------------------------------
@@ -1099,6 +1198,167 @@ function classifyFromSnapshots(tf15, tf60, tfD) {
   const price = tf15?.price ?? tf60?.price ?? tfD?.price ?? null;
 
   return { price, tf15, tf60, tfD, setupType, primaryDirection, dailyFavor, avgDistPct, dataOK };
+}
+
+/* =================================================================
+   SWING TRADE SCREENER (EUA) — usa os MESMOS dados já buscados
+   (candles de 60min e Diário), sem nenhuma chamada extra de API.
+
+   Regras (conforme especificação):
+   - Filtro técnico obrigatório: preço acima da MM200 (diária)
+   - Setup 1 (principal) — PULLBACK: preço retorna à MM20 (60min),
+     MM9 > MM20, e o último candle é de reação (fecha em alta, na
+     metade superior do range)
+   - Setup 2 — ROMPIMENTO: preço rompe o topo das últimas ~20 barras
+     diárias, com volume acima da média recente
+   - Ativos sem nenhum dos dois setups, ou abaixo da MM200, ficam
+     de fora da lista (nunca lateralizados / nunca sem volume)
+   ================================================================= */
+function highestHigh(bars, lookback, excludeLast) {
+  const slice = excludeLast ? bars.slice(-(lookback + 1), -1) : bars.slice(-lookback);
+  return slice.length ? Math.max(...slice.map((b) => b.high)) : null;
+}
+
+function averageVolume(bars, lookback, excludeLast) {
+  const slice = excludeLast ? bars.slice(-(lookback + 1), -1) : bars.slice(-lookback);
+  if (!slice.length) return null;
+  return slice.reduce((sum, b) => sum + (b.volume || 0), 0) / slice.length;
+}
+
+function evaluateSwingSetup(asset, bars60, barsD) {
+  if (!bars60 || bars60.length < 25 || !barsD || barsD.length < 205) return null;
+
+  const closesD = barsD.map((b) => b.close);
+  const closes60 = bars60.map((b) => b.close);
+
+  const priceD = closesD[closesD.length - 1];
+  const daily200 = smaLast(closesD, 200);
+  const dailyEma9 = emaLast(closesD, 9);
+  const dailyEma20 = emaLast(closesD, 20);
+
+  // FILTRO TÉCNICO OBRIGATÓRIO — preço abaixo da MM200 desqualifica o ativo
+  if (daily200 == null || priceD <= daily200) return null;
+
+  // FILTRO DE VOLUME — ativo sem volume relevante desqualifica
+  const avgVol20 = averageVolume(barsD, 20, false);
+  const lastVol = barsD[barsD.length - 1].volume;
+  if (!avgVol20 || !lastVol) return null;
+
+  // TENDÊNCIA (diária)
+  let trend;
+  if (priceD > dailyEma9 && dailyEma9 > dailyEma20 && dailyEma20 > daily200) trend = "Alta";
+  else if (dailyEma9 > dailyEma20) trend = "Reversão";
+  else trend = "Consolidação";
+
+  if (trend === "Consolidação") return null; // NÃO sugerir ativos lateralizados
+
+  // --- SETUP 1 (PRINCIPAL) — PULLBACK NA MM20 (60min) ---
+  const ema9_60 = emaLast(closes60, 9);
+  const ema20_60 = emaLast(closes60, 20);
+  const price60 = closes60[closes60.length - 1];
+  const lastBar60 = bars60[bars60.length - 1];
+
+  const nearMM20 = Math.abs(price60 - ema20_60) / ema20_60 < 0.015;
+  const mm9AboveMM20 = ema9_60 > ema20_60;
+  const reactionCandle = lastBar60.close > lastBar60.open && lastBar60.close > (lastBar60.high + lastBar60.low) / 2;
+
+  const isPullback = nearMM20 && mm9AboveMM20 && reactionCandle;
+
+  // --- SETUP 2 — ROMPIMENTO DE TOPO ANTERIOR (diário) ---
+  const prevTop = highestHigh(barsD, 20, true);
+  const breakout = prevTop != null && priceD > prevTop;
+  const risingVolume = lastVol > avgVol20 * 1.2;
+  const isBreakout = breakout && risingVolume;
+
+  if (!isPullback && !isBreakout) return null; // sem os dois setups, fora da lista
+
+  const setupKind = isPullback ? "Pullback" : "Rompimento";
+  const clarity = isPullback ? (nearMM20 ? 1 : 0.5) + (mm9AboveMM20 ? 1 : 0) : (risingVolume ? 1 : 0.5) + 1;
+  const trendScore = trend === "Alta" ? 2 : 1;
+  const score = trendScore + clarity;
+
+  let entrada, stop, alvo, observacao;
+  if (isPullback) {
+    entrada = `Compra na reação ao redor de $${ema20_60.toFixed(2)} (MM20 60min), após rompimento da máxima do candle de reação ($${lastBar60.high.toFixed(2)}).`;
+    stop = `Abaixo da mínima do candle de reação, ~$${lastBar60.low.toFixed(2)}.`;
+    alvo = `Topo anterior em $${(prevTop || priceD * 1.05).toFixed(2)} (ou relação risco/retorno mínima de 2:1).`;
+    observacao = `MM9 (${ema9_60.toFixed(2)}) acima da MM20 (${ema20_60.toFixed(2)}) no 60min — estrutura de pullback saudável dentro da tendência diária de ${trend.toLowerCase()}.`;
+  } else {
+    entrada = `Compra na continuidade após pullback ao rompimento de $${prevTop.toFixed(2)} (topo anterior).`;
+    stop = `Abaixo do topo rompido / MM9 diária, ~$${dailyEma9.toFixed(2)}.`;
+    alvo = `Projeção de $${(priceD + (priceD - prevTop)).toFixed(2)} (extensão do range rompido).`;
+    observacao = `Volume do último candle diário ${(lastVol / avgVol20).toFixed(1)}x acima da média de 20 períodos — rompimento com confirmação de força compradora.`;
+  }
+
+  return {
+    symbol: asset.symbol,
+    name: asset.name,
+    sector: asset.sector || "—",
+    trend,
+    setupKind,
+    entrada,
+    stop,
+    alvo,
+    observacao,
+    score,
+    price: priceD,
+  };
+}
+
+function renderSwingScreener(barsUSMap) {
+  const usAssets = ASSETS.filter((a) => a.country === "US");
+  const results = usAssets
+    .map((asset) => {
+      const bars = (barsUSMap && barsUSMap[asset.symbol]) || {};
+      return evaluateSwingSetup(asset, bars["60M"], bars["D"]);
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score);
+
+  swingResultsCache = results; // usado pela persistência local
+  renderSwingResults(results);
+}
+
+function renderSwingResults(results) {
+  const section = document.getElementById("swingSection");
+  const grid = document.getElementById("swingGrid");
+  if (!section || !grid) return;
+
+  if (!results || results.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <span>🔍</span>
+        <p>Nenhum ativo passou nos filtros de swing trade agora (tendência, MM200, volume e setup).</p>
+      </div>`;
+    return;
+  }
+
+  const top5 = results.slice(0, 5).map((r) => r.symbol);
+
+  grid.innerHTML = results
+    .map((r, i) => {
+      const isTop = top5.includes(r.symbol);
+      return `
+        <div class="swing-card ${isTop ? "swing-top" : ""}">
+          ${isTop ? `<span class="swing-rank">TOP ${i + 1}</span>` : ""}
+          <div class="swing-header">
+            <div>
+              <span class="swing-symbol">${r.symbol}</span>
+              <span class="swing-name">${r.name} · ${r.sector}</span>
+            </div>
+            <span class="swing-setup-badge ${r.setupKind === "Pullback" ? "pullback" : "breakout"}">${r.setupKind}</span>
+          </div>
+          <div class="swing-meta">
+            <span>Tendência: <b>${r.trend}</b></span>
+            <span>Preço: <b>$${r.price.toFixed(2)}</b></span>
+          </div>
+          <div class="swing-row"><span>Entrada:</span><p>${r.entrada}</p></div>
+          <div class="swing-row"><span>Stop:</span><p>${r.stop}</p></div>
+          <div class="swing-row"><span>Alvo:</span><p>${r.alvo}</p></div>
+          <div class="swing-obs">${r.observacao}</div>
+        </div>`;
+    })
+    .join("");
 }
 
 /* ---------------------------------------------------------------
@@ -1324,7 +1584,7 @@ const STORAGE_KEY = "dminvest_market_snapshot_v1";
 
 function saveSnapshotToStorage() {
   try {
-    const snapshot = { savedAt: Date.now(), assets: {} };
+    const snapshot = { savedAt: Date.now(), assets: {}, swing: swingResultsCache };
     ASSETS.forEach((a) => {
       snapshot.assets[a.symbol] = {
         price: a.price,
@@ -1368,9 +1628,9 @@ function applySnapshotToAssets(snapshot) {
 }
 
 async function runVerification(showToasts = true) {
-  let closesMap, priceMap;
+  let closesMap, priceMap, barsUSMap;
   try {
-    ({ closesMap, priceMap } = await fetchAllMarketData());
+    ({ closesMap, priceMap, barsUSMap } = await fetchAllMarketData());
   } catch (err) {
     console.error("Falha geral ao buscar dados de mercado:", err);
     showAlert("side", "Erro ao buscar dados", "Verifique sua conexão e as chaves de API configuradas.", 6000);
@@ -1430,6 +1690,7 @@ async function runVerification(showToasts = true) {
 
   renderSummary();
   renderCards();
+  renderSwingScreener(barsUSMap);
   saveSnapshotToStorage();
   document.getElementById("lastCheck").textContent =
     "última verificação: " + new Date().toLocaleTimeString("pt-BR", { hour12: false });
@@ -1531,10 +1792,13 @@ function init() {
 
   if (cached) {
     applySnapshotToAssets(cached);
+    swingResultsCache = cached.swing || [];
+    renderSwingResults(swingResultsCache);
     document.getElementById("lastCheck").textContent =
       "última verificação: " + new Date(cached.savedAt).toLocaleTimeString("pt-BR", { hour12: false }) + " (dados salvos)";
   } else {
     document.getElementById("lastCheck").textContent = "nenhuma verificação ainda — clique em \"Verificar agora\"";
+    renderSwingResults([]);
   }
 
   renderSummary();
